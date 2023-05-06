@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DataStruct, Lit};
@@ -15,22 +17,34 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
     };
 
     let attribute_count = fields.len();
-    let stride: u32 = fields.iter().map(|field_size| field_size * 4).sum();
+
+    let stride: u32 = fields
+        .iter()
+        .map(|field_size| field_size * size_of::<f32>() as u32)
+        .sum();
+
     let offsets: Vec<_> = fields
         .iter()
-        .scan(0, |&mut acc, &size| Some(acc + size))
+        .scan((0, 0), |(total, prev), &len| {
+            *total += *prev;
+            *prev = len * size_of::<f32>() as u32;
+            Some(*total)
+        })
         .collect();
 
-    println!("Defining {} attributes for: {}", attribute_count, name);
+    println!("Defining {} attributes for: {}", attribute_count, name,);
 
     let declarations: Vec<_> = offsets
         .iter()
         .enumerate()
         .map(|(i, offset)| {
+            println!(
+                "{}/{} : stride: {} offset: {}",
+                i, attribute_count, stride, offset
+            );
             quote! {
-                //glad_gl::gl::VertexAttribPointer(#i as u32, #attribute_count, glad_gl::gl::FLOAT, glad_gl::gl::FALSE, #stride, #offset);
-                //glad_gl::gl::EnableVertexAttribArray(#i as u32);
-                println!("{}/{} : stride: {} offset: {}", #i, #attribute_count, #stride, #offset);
+                glad_gl::gl::VertexAttribPointer(#i as u32, #attribute_count as i32, glad_gl::gl::FLOAT, glad_gl::gl::FALSE, #stride as i32, #offset as *const std::ffi::c_void);
+                glad_gl::gl::EnableVertexAttribArray(#i as u32);
             }
         })
         .collect();
@@ -39,7 +53,9 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
         impl Vertex for #name{
             type VertexType = #name;
             fn declare_layout(){
-                #(#declarations)*
+                unsafe{
+                    #(#declarations)*
+                }
             }
         }
     }
