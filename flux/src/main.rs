@@ -5,6 +5,8 @@ use atlas::{
 use scene::main_menu_scene::MainMenuScene;
 
 mod scene;
+mod components;
+
 
 fn main() {
     match start_game() {

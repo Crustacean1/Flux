@@ -1,12 +1,13 @@
 use std::collections::VecDeque;
 
 use atlas::{
+    allocator::SelfSufficient,
     graphics::graphics_context::{GraphicsContext, UserEvent},
     logger::Logger,
     scene::{Scene, SceneAction},
 };
 
-use self::menu::Menu;
+use crate::components::ConcreteComponentAllocator;
 
 mod menu;
 
@@ -17,8 +18,9 @@ enum SceneEvent {
 
 pub struct MainMenuScene {
     scene_events: VecDeque<SceneEvent>,
+    component_allocator: ConcreteComponentAllocator,
     // Components
-    menus: Vec<Menu>,
+    //shapes: Allocator<ShapeRenderer>
 }
 
 impl Scene for MainMenuScene {
@@ -58,13 +60,7 @@ impl MainMenuScene {
     pub fn new() -> Box<dyn Scene> {
         Box::new(MainMenuScene {
             scene_events: VecDeque::new(),
-            menus: Self::create_menus(),
+            component_allocator: ConcreteComponentAllocator::new(),
         })
-    }
-}
-
-impl MainMenuScene {
-    fn create_menus() -> Vec<Menu> {
-        vec![]
     }
 }

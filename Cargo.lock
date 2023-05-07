@@ -38,6 +38,9 @@ name = "flux"
 version = "0.1.0"
 dependencies = [
  "atlas",
+ "glad-gl",
+ "glam",
+ "macros",
 ]
 
 [[package]]

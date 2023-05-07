@@ -1,12 +1,15 @@
-use std::{mem, ptr};
+use std::ptr;
 
 use glad_gl::gl;
 
-use crate::graphics::{
+use atlas::allocator::Createable;
+use atlas::graphics::{
     material::TextureMaterial,
     mesh::Mesh,
     vertices::base_vertices::{TriangleIndex, Vertex2P},
 };
+
+use atlas::components::ComponentEntity;
 
 pub struct ShapeRenderer {
     entity_id: usize,
@@ -14,8 +17,14 @@ pub struct ShapeRenderer {
     material: TextureMaterial,
 }
 
-impl ShapeRenderer {
-    pub fn quad(entity_id: usize, texture: &str) -> Self {
+impl ComponentEntity for ShapeRenderer {
+    fn entity_id(&self) -> usize {
+        self.entity_id
+    }
+}
+
+impl Createable<ShapeRenderer> for ShapeRenderer {
+    fn new(entity_id: usize) -> ShapeRenderer {
         ShapeRenderer {
             entity_id,
             mesh: Mesh::gen_quad(5.0, 5.0),

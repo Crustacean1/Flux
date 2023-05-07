@@ -1,8 +1,14 @@
 use std::mem::size_of;
 
+use component_allocator::{
+    allocator_implementation, allocator_initializer, allocator_struct,
+    component_type_implementations, get_component_types,
+};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DataStruct, Lit};
+
+mod component_allocator;
 
 #[proc_macro_derive(Vertex)]
 pub fn vertex_derive(stream: TokenStream) -> TokenStream {
@@ -58,6 +64,36 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
                 }
             }
         }
+    }
+    .into()
+}
+
+#[proc_macro]
+pub fn declare_components(component_stream: TokenStream) -> TokenStream {
+    let component_types = get_component_types(component_stream);
+
+    let allocator_fields = allocator_struct(&component_types);
+    let allocator_initializer = allocator_initializer(&component_types);
+    let allocator_implementations = allocator_implementation(&component_types);
+
+    let component_type_implementations = component_type_implementations(&component_types);
+
+    quote! {
+        #(#component_type_implementations)*
+
+        pub struct ConcreteComponentAllocator{
+            #(#allocator_fields),*
+        }
+
+        impl ConcreteComponentAllocator {
+            pub fn new() -> Self {
+                ConcreteComponentAllocator {
+                    #(#allocator_initializer),*
+                }
+            }
+        }
+
+         #(#allocator_implementations)*
     }
     .into()
 }

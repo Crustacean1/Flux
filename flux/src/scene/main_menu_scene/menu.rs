@@ -1,4 +1,4 @@
-use atlas::components::Component;
+use atlas::components::ComponentEntity;
 
 pub struct Menu {
     entity_id: usize,
@@ -6,7 +6,7 @@ pub struct Menu {
     children: Vec<usize>,
 }
 
-impl Component for Menu {
+impl ComponentEntity for Menu {
     fn entity_id(&self) -> usize {
         self.entity_id
     }
