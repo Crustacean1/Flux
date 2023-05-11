@@ -2,31 +2,20 @@ use std::ptr;
 
 use glad_gl::gl;
 
-use atlas::allocator::Createable;
 use atlas::graphics::{
     material::TextureMaterial,
     mesh::Mesh,
     vertices::base_vertices::{TriangleIndex, Vertex2P},
 };
 
-use atlas::components::ComponentEntity;
-
 pub struct ShapeRenderer {
-    entity_id: usize,
     mesh: Mesh<Vertex2P, TriangleIndex>,
     material: TextureMaterial,
 }
 
-impl ComponentEntity for ShapeRenderer {
-    fn entity_id(&self) -> usize {
-        self.entity_id
-    }
-}
-
-impl Createable<ShapeRenderer> for ShapeRenderer {
-    fn new(entity_id: usize) -> ShapeRenderer {
+impl ShapeRenderer {
+    pub fn quad() -> ShapeRenderer {
         ShapeRenderer {
-            entity_id,
             mesh: Mesh::gen_quad(5.0, 5.0),
             material: TextureMaterial::from_color(0.0, 1.0, 0.0),
         }

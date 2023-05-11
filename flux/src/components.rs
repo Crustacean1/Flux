@@ -1,10 +1,10 @@
-mod shape_renderer;
-mod transform;
+pub mod shape_renderer;
+pub mod transform;
 
-use atlas::allocator::ComponentAllocator;
-use atlas::components::ComponentType;
-use macros::declare_components;
 use self::{shape_renderer::ShapeRenderer, transform::Transform};
+use atlas::allocator::ComponentAllocator;
 use atlas::allocator::GenericComponentAllocator;
+use atlas::components::{Component, ComponentType};
+use macros::declare_components;
 
 declare_components!((ShapeRenderer, Transform));

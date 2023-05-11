@@ -1,13 +1,15 @@
 use std::collections::VecDeque;
 
 use atlas::{
-    allocator::SelfSufficient,
     graphics::graphics_context::{GraphicsContext, UserEvent},
     logger::Logger,
-    scene::{Scene, SceneAction},
+    scene::{Scene, SceneAction, Stage},
 };
 
-use crate::components::ConcreteComponentAllocator;
+use crate::components::{
+    shape_renderer::{ShapeRenderer, ShapeRendererSystem},
+    ConcreteComponentAllocator,
+};
 
 mod menu;
 
@@ -19,6 +21,8 @@ enum SceneEvent {
 pub struct MainMenuScene {
     scene_events: VecDeque<SceneEvent>,
     component_allocator: ConcreteComponentAllocator,
+    shape_renderer_system: ShapeRendererSystem,
+    stage: Stage,
     // Components
     //shapes: Allocator<ShapeRenderer>
 }
@@ -31,7 +35,11 @@ impl Scene for MainMenuScene {
     ) -> SceneAction {
         loop {
             self.handle_user_events(graphics_context);
+
             graphics_context.display();
+
+            self.shape_renderer_system.render();
+
             if let Some(scene_action) = self.handle_scene_events() {
                 return scene_action;
             }
@@ -58,9 +66,20 @@ impl MainMenuScene {
     }
 
     pub fn new() -> Box<dyn Scene> {
-        Box::new(MainMenuScene {
+        let mut main_scene = MainMenuScene {
             scene_events: VecDeque::new(),
             component_allocator: ConcreteComponentAllocator::new(),
-        })
+            shape_renderer_system: ShapeRendererSystem {},
+            stage: Stage::new(),
+        };
+
+        let menu = main_scene.stage.add_entity();
+
+        menu.add_component::<ConcreteComponentAllocator, ShapeRenderer>(
+            &mut main_scene.component_allocator,
+            ShapeRenderer::quad(),
+        );
+
+        Box::new(main_scene)
     }
 }

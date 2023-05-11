@@ -1,4 +1,5 @@
-use crate::components::{ComponentEntity, ComponentType};
+use super::components::Component;
+use crate::components::ComponentType;
 
 enum AllocationUnit<T> {
     Full(T),
@@ -9,25 +10,25 @@ pub trait Createable<T> {
     fn new(entity_id: usize) -> T;
 }
 
-pub struct ComponentAllocator<T: ComponentEntity + ComponentType> {
-    components: Vec<T>,
+pub struct ComponentAllocator<T: ComponentType> {
+    components: Vec<Component<T>>,
 }
 
-impl<T: ComponentEntity + ComponentType> ComponentAllocator<T> {
+impl<T: ComponentType> ComponentAllocator<T> {
     pub fn new() -> Self {
         ComponentAllocator::<T> { components: vec![] }
     }
 
     pub fn add_component(&mut self, entity_id: usize, value: T) -> usize {
-        self.components.push(value);
+        self.components.push(Component::<T>::new(entity_id, value));
         self.components.len() - 1
     }
 
-    pub fn get_component(&self, i: usize) -> Option<&T> {
+    pub fn get_component(&self, i: usize) -> Option<&Component<T>> {
         self.components.get(i)
     }
 
-    pub fn get_component_mut(&mut self, i: usize) -> Option<&mut T> {
+    pub fn get_component_mut(&mut self, i: usize) -> Option<&mut Component<T>> {
         self.components.get_mut(i)
     }
 
@@ -35,15 +36,15 @@ impl<T: ComponentEntity + ComponentType> ComponentAllocator<T> {
         todo!()
     }
 
-    fn reallocate(&mut self) {}
-}
+    pub fn components(&mut self) -> impl Iterator {
 
-pub trait SelfSufficient<T> {
-    fn new() -> T;
+    }
+
+    fn reallocate(&mut self) {}
 }
 
 pub trait GenericComponentAllocator<T: ComponentType> {
     fn add_component(&mut self, entity_id: usize, value: T) -> usize;
     fn remove_component(&mut self, entity_id: usize);
-    fn get_component(&mut self, entity_id: usize) -> &mut T;
+    fn get_component_mut(&mut self, entity_id: usize) -> Option<&mut Component<T>>;
 }
