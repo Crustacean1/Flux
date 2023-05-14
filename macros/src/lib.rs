@@ -22,8 +22,6 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
         panic!("Entity deriving 'Vertex' must be a struct: '{}'", name);
     };
 
-    let attribute_count = fields.len();
-
     let stride: u32 = fields
         .iter()
         .map(|field_size| field_size * size_of::<f32>() as u32)
@@ -34,22 +32,22 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
         .scan((0, 0), |(total, prev), &len| {
             *total += *prev;
             *prev = len * size_of::<f32>() as u32;
-            Some(*total)
+            Some((len, *total))
         })
         .collect();
-
-    println!("Defining {} attributes for: {}", attribute_count, name,);
 
     let declarations: Vec<_> = offsets
         .iter()
         .enumerate()
-        .map(|(i, offset)| {
-            println!(
-                "{}/{} : stride: {} offset: {}",
-                i, attribute_count, stride, offset
-            );
+        .map(|(i, (len, offset))| {
             quote! {
-                glad_gl::gl::VertexAttribPointer(#i as u32, #attribute_count as i32, glad_gl::gl::FLOAT, glad_gl::gl::FALSE, #stride as i32, #offset as *const std::ffi::c_void);
+                println!("Defining vertex attribute: {} {} {} {}", #i, #len, #stride, #offset);
+                glad_gl::gl::VertexAttribPointer(#i as u32,
+                    #len as i32,
+                    glad_gl::gl::FLOAT,
+                    glad_gl::gl::FALSE,
+                    #stride as i32,
+                    #offset as *const std::ffi::c_void);
                 glad_gl::gl::EnableVertexAttribArray(#i as u32);
             }
         })
@@ -62,6 +60,10 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
                 unsafe{
                     #(#declarations)*
                 }
+            }
+
+            fn size(len: usize) -> usize {
+                len * #stride as usize
             }
         }
     }
@@ -81,15 +83,11 @@ pub fn declare_components(component_stream: TokenStream) -> TokenStream {
     quote! {
         #(#component_type_implementations)*
 
-        pub struct ConcreteComponentAllocator{
-            #(#allocator_fields),*
-        }
+        pub struct ConcreteComponentAllocator(#(#allocator_fields),*);
 
         impl ConcreteComponentAllocator {
             pub fn new() -> Self {
-                ConcreteComponentAllocator {
-                    #(#allocator_initializer),*
-                }
+                ConcreteComponentAllocator (#(#allocator_initializer),*)
             }
         }
 

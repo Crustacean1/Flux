@@ -8,3 +8,4 @@ glfw = "0.51.0"
 glad-gl = {path="../glad-gl"}
 glam = "0.24.0"
 macros = {path="../macros"}
+image = "0.24.6"

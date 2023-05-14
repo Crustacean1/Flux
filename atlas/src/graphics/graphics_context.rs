@@ -39,7 +39,7 @@ impl GraphicsContext {
                 None => Err(GameError::new("Failed to create window")),
             }?;
 
-        glfw.with_primary_monitor(|_glfw, monitor| match monitor {
+        /*glfw.with_primary_monitor(|_glfw, monitor| match monitor {
             Some(monitor) => {
                 if let Some(video_mode) = monitor.get_video_mode() {
                     window.set_monitor(
@@ -56,7 +56,7 @@ impl GraphicsContext {
                 }
             }
             None => Err(GameError::new("Failed to get monitor")),
-        })?;
+        })?;*/
 
         window.make_current();
 
@@ -69,6 +69,7 @@ impl GraphicsContext {
 
         unsafe {
             gl::ClearColor(0.2, 0.2, 0.2, 1.0);
+            gl::PointSize(10.0);
         }
 
         Ok(GraphicsContext {
@@ -88,10 +89,22 @@ impl GraphicsContext {
         })
     }
 
+    pub fn texture_unit_count(&self) -> u32 {
+        unsafe {
+            let mut texture_unit_count = 0;
+            gl::GetIntegerv(gl::MAX_TEXTURE_IMAGE_UNITS, &mut texture_unit_count);
+            texture_unit_count as u32
+        }
+    }
+
     pub fn display(&mut self) {
         self.window.swap_buffers();
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+    }
+
+    pub fn dimensions(&self) -> (i32, i32) {
+        self.window.get_size()
     }
 }

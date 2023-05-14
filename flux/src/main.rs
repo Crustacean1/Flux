@@ -1,12 +1,11 @@
 use atlas::{
     game_root::{GameError, GameRoot},
-    root_resource_manager::RootResourceManager,
+    resource_manager::root_resource_manager::RootResourceManager,
 };
 use scene::main_menu_scene::MainMenuScene;
 
+mod component_manager;
 mod scene;
-mod components;
-
 
 fn main() {
     match start_game() {

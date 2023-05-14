@@ -1,15 +1,26 @@
 use std::collections::VecDeque;
 
 use atlas::{
-    graphics::graphics_context::{GraphicsContext, UserEvent},
+    components::{
+        camera::{Camera, Frustrum},
+        shape_renderer::ShapeRendererSystem,
+    },
+    game_root::GameError,
+    graphics::{
+        graphics_context::{GraphicsContext, UserEvent},
+        shaders::{ShaderProgram, UiShader},
+    },
     logger::Logger,
-    scene::{Scene, SceneAction, Stage},
+    resource_manager::{
+        root_resource_manager::RootResourceManager, scene_resource_manager::SceneResourceManager,
+        ResourceManager,
+    },
+    scene::{Scene, SceneAction},
 };
 
-use crate::components::{
-    shape_renderer::{ShapeRenderer, ShapeRendererSystem},
-    ConcreteComponentAllocator,
-};
+use crate::component_manager::{ComponentAggregator, ComponentManager};
+
+use self::menu::main_menu;
 
 mod menu;
 
@@ -20,11 +31,10 @@ enum SceneEvent {
 
 pub struct MainMenuScene {
     scene_events: VecDeque<SceneEvent>,
-    component_allocator: ConcreteComponentAllocator,
-    shape_renderer_system: ShapeRendererSystem,
-    stage: Stage,
-    // Components
-    //shapes: Allocator<ShapeRenderer>
+    camera: Camera,
+    component_manager: ComponentAggregator,
+    resource_manager: SceneResourceManager,
+    shape_rendering_system: ShapeRendererSystem,
 }
 
 impl Scene for MainMenuScene {
@@ -38,7 +48,8 @@ impl Scene for MainMenuScene {
 
             graphics_context.display();
 
-            self.shape_renderer_system.render();
+            let shapes = self.component_manager.components_mut();
+            self.shape_rendering_system.render(shapes, &self.camera);
 
             if let Some(scene_action) = self.handle_scene_events() {
                 return scene_action;
@@ -65,21 +76,33 @@ impl MainMenuScene {
         None
     }
 
-    pub fn new() -> Box<dyn Scene> {
-        let mut main_scene = MainMenuScene {
+    pub fn new(
+        root_resource_manager: &mut RootResourceManager,
+        graphics_context: &GraphicsContext,
+    ) -> Result<Box<dyn Scene>, GameError> {
+        let ui_shader: ShaderProgram<UiShader> = root_resource_manager.get("basic_ui")?.res;
+        let shape_rendering_system = ShapeRendererSystem::new(ui_shader);
+
+        let mut component_manager = ComponentAggregator::new();
+        let mut resource_manager = SceneResourceManager::build(graphics_context)?;
+
+        main_menu(&mut component_manager, &mut resource_manager)?;
+
+        let (width, height) = graphics_context.dimensions();
+        let (width, height) = (width as f32 / 2.0, height as f32 / 2.0);
+
+        let main_scene = MainMenuScene {
+            resource_manager,
             scene_events: VecDeque::new(),
-            component_allocator: ConcreteComponentAllocator::new(),
-            shape_renderer_system: ShapeRendererSystem {},
-            stage: Stage::new(),
+            camera: Camera::new(
+                Frustrum::new(-width, width, -height, height, 1.0, 10.0),
+                glam::Vec3::new(0.0, 0.0, -1.0),
+                glam::Vec3::new(0.0, 0.0, 1.0),
+            ),
+            component_manager,
+            shape_rendering_system,
         };
 
-        let menu = main_scene.stage.add_entity();
-
-        menu.add_component::<ConcreteComponentAllocator, ShapeRenderer>(
-            &mut main_scene.component_allocator,
-            ShapeRenderer::quad(),
-        );
-
-        Box::new(main_scene)
+        Ok(Box::new(main_scene))
     }
 }

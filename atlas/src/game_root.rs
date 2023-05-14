@@ -3,7 +3,7 @@ use std::{fmt, rc::Rc};
 use crate::{
     graphics::graphics_context::GraphicsContext,
     logger::{console_logger::ConsoleLogger, Logger},
-    root_resource_manager::{self, ResourceError, ResourceManager, RootResourceManager},
+    resource_manager::{root_resource_manager::RootResourceManager, ResourceError},
     scene::{Scene, SceneAction},
 };
 
@@ -45,7 +45,9 @@ impl GameRoot {
     pub fn new(title: &str) -> Result<Self, GameError> {
         let logger = Rc::new(ConsoleLogger::new());
         let graphics_context = GraphicsContext::new(title)?;
-        let root_resource_manager = RootResourceManager::new(logger.clone());
+        let mut root_resource_manager = RootResourceManager::new(logger.clone())?;
+
+        root_resource_manager.index_resources()?;
 
         Ok(GameRoot {
             logger,
@@ -57,22 +59,31 @@ impl GameRoot {
     pub fn run(&mut self) {
         let mut next_scene = String::from("main");
         loop {
-            if let Some(mut scene) = self.root_resource_manager.get(&next_scene) {
-                match scene.run(self.logger.clone(), &mut self.graphics_context) {
-                    SceneAction::Exit => {
-                        self.logger.log_info("Exiting the game");
-                        break;
-                    }
-                    SceneAction::NewScene(scene) => {
-                        self.logger
-                            .log_info(&format!("Transitioning to: {}", scene));
-                        next_scene = String::from(scene);
-                    }
-                    _ => {}
+            let mut scene: Box<dyn Scene> = match self
+                .root_resource_manager
+                .get_scene(&next_scene, &self.graphics_context)
+            {
+                Ok(scene) => scene,
+                Err(e) => {
+                    self.logger.log_error(&format!(
+                        "Failed to load scene '{}' : {}",
+                        next_scene,
+                        e.to_string()
+                    ));
+                    return;
                 }
-            } else {
-                self.logger
-                    .log_error(&format!("No scene with name: '{}' found", next_scene))
+            };
+            match scene.run(self.logger.clone(), &mut self.graphics_context) {
+                SceneAction::Exit => {
+                    self.logger.log_info("Exiting the game");
+                    break;
+                }
+                SceneAction::NewScene(scene) => {
+                    self.logger
+                        .log_info(&format!("Transitioning to: {}", scene));
+                    next_scene = String::from(scene);
+                }
+                _ => {}
             }
         }
     }

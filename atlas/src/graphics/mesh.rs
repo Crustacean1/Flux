@@ -1,23 +1,28 @@
-use std::{marker::PhantomData, mem};
+use std::{
+    fmt,
+    marker::PhantomData,
+    mem::{self, size_of},
+};
 
 use glad_gl::gl;
 
-use super::vertices::{Index, PrimitiveType, Shapely, Vertex};
+use super::vertices::{Index, Shapely, Vertex};
 
 pub struct Mesh<
-    VertexType: Vertex + Shapely<Attribute = VertexType>,
-    IndexType: Index + Shapely<Attribute = IndexType>,
+    VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
+    IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
 > {
     vao: u32,
     vbo: u32,
     ebo: u32,
+    index_count: u32,
     phantom_vertex: PhantomData<VertexType>,
     phantom_index: PhantomData<IndexType>,
 }
 
 impl<
-        VertexType: Vertex + Shapely<Attribute = VertexType>,
-        IndexType: Index + Shapely<Attribute = IndexType>,
+        VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
+        IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
     > Mesh<VertexType, IndexType>
 {
     pub fn new(vertices: &[VertexType], indices: &[IndexType]) -> Self {
@@ -27,12 +32,12 @@ impl<
             vao,
             vbo,
             ebo,
+            index_count: 0,
             phantom_index: Default::default(),
             phantom_vertex: Default::default(),
         };
 
         mesh.load(vertices, indices);
-
         mesh
     }
 
@@ -43,18 +48,23 @@ impl<
     }
 
     pub fn load(&mut self, vertices: &[VertexType], indices: &[IndexType]) {
+        self.index_count = IndexType::index_count(indices.len()) as u32;
         unsafe {
             gl::BindVertexArray(self.vao);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                vertices.len() as isize,
+                VertexType::size(vertices.len()) as isize,
                 mem::transmute(vertices.as_ptr()),
                 gl::STATIC_DRAW,
             );
 
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                indices.len() as isize,
+                IndexType::size(indices.len()) as isize,
                 mem::transmute(indices.as_ptr()),
                 gl::STATIC_DRAW,
             );
@@ -65,8 +75,8 @@ impl<
         IndexType::primitive_type().into()
     }
 
-    pub fn count(&self) -> i32 {
-        0
+    pub fn count(&self) -> u32 {
+        self.index_count
     }
 
     fn create_buffers() -> (u32, u32, u32) {
@@ -87,8 +97,8 @@ impl<
 }
 
 impl<
-        VertexType: Vertex + Shapely<Attribute = VertexType>,
-        IndexType: Index + Shapely<Attribute = IndexType>,
+        VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
+        IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
     > Mesh<VertexType, IndexType>
 {
     pub fn gen_quad(width: f32, height: f32) -> Self {
