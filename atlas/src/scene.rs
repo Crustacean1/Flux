@@ -16,4 +16,3 @@ pub trait Scene {
         graphics_context: &mut GraphicsContext,
     ) -> SceneAction;
 }
-

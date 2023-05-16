@@ -2,7 +2,7 @@ use glad_gl::gl;
 
 use crate::game_root::GameError;
 use std::{
-    fs::{read_to_string, File},
+    fs::File,
     io::{self, Read},
     marker::PhantomData,
     mem,
@@ -11,7 +11,16 @@ use std::{
 
 use super::material::TextureMaterial;
 
-#[derive(Clone)]
+impl From<(ShaderType, String)> for GameError {
+    fn from((shader_type, error): (ShaderType, String)) -> Self {
+        GameError::new(&format!(
+            "Shader '{:?}' compilation failed:\n{}",
+            shader_type, error
+        ))
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct ShaderSource {
     pub vertex: Option<PathBuf>,
     pub fragment: Option<PathBuf>,
@@ -45,53 +54,30 @@ impl<T: Clone> ShaderProgram<T> {
             .map(|(shader_type, path)| (shader_type, Self::read_file(&path)))
             .collect();
 
-        let compilations: Vec<_> = sources
+        let shaders = sources
             .iter()
             .map(|(shader_type, source)| match source {
                 Ok(source) => match Self::compile_shader(*shader_type, source) {
                     Ok(shader) => Ok(shader),
-                    Err(e) => Err((shader_type, e)),
+                    Err(e) => Err((*shader_type, e)),
                 },
-                Err(e) => Err((shader_type, e.to_string())),
+                Err(e) => Err((*shader_type, e.to_string())),
             })
-            .collect();
-
-        let errors: Vec<_> = compilations
-            .iter()
-            .filter_map(|compilation_result| match compilation_result {
-                Err(e) => Some(e),
-                _ => None,
-            })
-            .collect();
-
-        if !errors.is_empty() {
-            let error_msg = errors.iter().fold(
-                String::new(),
-                |error_msg, (shader_type, compilation_error)| {
-                    format!(
-                        "{}\n---------\n{:?}\nShader compilation failed:\n{}",
-                        error_msg, shader_type, compilation_error
-                    )
+            .fold(
+                Ok(vec![]),
+                |shaders: Result<Vec<u32>, GameError>, result| {
+                    let mut shaders = shaders?;
+                    shaders.push(result.clone()?);
+                    Ok(shaders)
                 },
-            );
+            )?;
 
-            Err(GameError::new(&error_msg))
-        } else {
-            let shaders: Vec<_> = compilations
-                .iter()
-                .filter_map(|compilation| match compilation {
-                    Ok(shader) => Some(*shader),
-                    Err(_) => None,
-                })
-                .collect();
-
-            match Self::link_program(&shaders) {
-                Ok(shader_program) => Ok(Self {
-                    shader_id: shader_program,
-                    phantom: PhantomData,
-                }),
-                Err(e) => Err(GameError::new(&e)),
-            }
+        match Self::link_program(&shaders) {
+            Ok(shader_program) => Ok(Self {
+                shader_id: shader_program,
+                phantom: PhantomData,
+            }),
+            Err(e) => Err(GameError::new(&e)),
         }
     }
 
@@ -132,7 +118,16 @@ impl<T: Clone> ShaderProgram<T> {
 
             gl::ShaderSource(shader_id, 1, &shader_src, std::ptr::null());
             gl::CompileShader(shader_id);
-            Ok(shader_id)
+
+            match Self::check_for_errors(
+                shader_id,
+                gl::COMPILE_STATUS,
+                gl::GetShaderiv,
+                gl::GetShaderInfoLog,
+            ) {
+                Ok(_) => Ok(shader_id),
+                Err(msg) => Err(msg),
+            }
         }
     }
 
@@ -188,8 +183,7 @@ impl<T: Clone> ShaderProgram<T> {
     pub fn load_mvp(&self, mat: &[f32; 16]) {
         unsafe {
             gl::UseProgram(self.shader_id);
-            let mvp =
-                gl::GetUniformLocation(self.shader_id, mem::transmute("mvp\0".as_ptr()));
+            let mvp = gl::GetUniformLocation(self.shader_id, mem::transmute("mvp\0".as_ptr()));
             gl::UniformMatrix4fv(mvp, 1, gl::FALSE, mat.as_ptr());
         }
     }

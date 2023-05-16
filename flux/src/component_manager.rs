@@ -12,7 +12,7 @@ pub trait EntityManager {
 }
 
 pub trait ComponentIterator<'a, T> {
-    fn use_components(&'a mut self, run: &dyn Fn(T) -> ());
+    fn use_components(&'a mut self, run: &dyn Fn(&[T]) -> ());
 }
 
 pub struct ComponentAggregator {
@@ -77,14 +77,19 @@ impl<'a> ComponentIterator<'a, (&'a Component<ShapeRenderer>, &'a Component<Tran
 {
     fn use_components(
         &'a mut self,
-        run: &dyn Fn((&'a Component<ShapeRenderer>, &'a Component<Transform>)) -> (),
+        run: &dyn Fn(&[(&'a Component<ShapeRenderer>, &'a Component<Transform>)]) -> (),
     ) {
-        self.shape_and_transform
+        let bundle: Vec<_> = self
+            .shape_and_transform
             .iter()
-            .for_each(|&(shape_i, transform_i)| {
-                let shape = &self.shape_renderers[shape_i];
-                let transform = &self.transforms[transform_i];
-                run((shape, transform));
+            .map(|&(shape_i, transform_i)| {
+                (
+                    &self.shape_renderers[shape_i],
+                    &self.transforms[transform_i],
+                )
             })
+            .collect();
+
+        run(&bundle);
     }
 }

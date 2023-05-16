@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use atlas::{
     components::{
         camera::{Camera, Frustrum},
-        shape_renderer::ShapeRendererSystem,
+        shape_renderer::{ShapeAndTransform, ShapeRendererSystem},
     },
     game_root::GameError,
     graphics::{
@@ -18,7 +18,7 @@ use atlas::{
     scene::{Scene, SceneAction},
 };
 
-use crate::component_manager::{ComponentAggregator, ComponentManager};
+use crate::component_manager::{ComponentAggregator, ComponentIterator, ComponentManager};
 
 use self::menu::main_menu;
 
@@ -40,7 +40,7 @@ pub struct MainMenuScene {
 impl Scene for MainMenuScene {
     fn run(
         &mut self,
-        logger: std::rc::Rc<dyn Logger>,
+        _: std::rc::Rc<dyn Logger>,
         graphics_context: &mut GraphicsContext,
     ) -> SceneAction {
         loop {
@@ -48,8 +48,10 @@ impl Scene for MainMenuScene {
 
             graphics_context.display();
 
-            let shapes = self.component_manager.components_mut();
-            self.shape_rendering_system.render(shapes, &self.camera);
+            self.component_manager.use_components(&|shape_transform| {
+                self.shape_rendering_system
+                    .render(shape_transform, &self.camera);
+            });
 
             if let Some(scene_action) = self.handle_scene_events() {
                 return scene_action;

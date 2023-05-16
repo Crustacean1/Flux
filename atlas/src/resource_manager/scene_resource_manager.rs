@@ -4,17 +4,11 @@ use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
-    graphics::{
-        graphics_context::{self, GraphicsContext},
-        material::TextureMaterial,
-    },
+    graphics::{graphics_context::GraphicsContext, material::TextureMaterial},
 };
 
 use super::{
-    indexer::{crawl_dirs, index_resources},
-    resource::Resource,
-    texture::index_textures,
-    ResourceManager,
+    indexer::index_resources, resource::Resource, texture::index_textures, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -47,6 +41,7 @@ impl SceneResourceManager {
         game_dir.pop();
         game_dir.pop();
         game_dir.push("flux");
+        game_dir.push("assets");
         Ok(game_dir)
     }
 }

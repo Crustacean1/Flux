@@ -17,7 +17,6 @@ pub fn index_textures(
         .iter()
         .filter(|file| texture_resource_filer(file))
         .filter_map(|path| {
-            println!("yamete sempai");
             let filename = String::from(path.file_stem()?.to_str()?);
             Some((filename, LazyResource::Unloaded(path.clone())))
         })

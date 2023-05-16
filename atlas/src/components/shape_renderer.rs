@@ -9,7 +9,7 @@ use crate::graphics::{
     vertices::base_vertices::{TriangleIndex, Vertex2PT},
 };
 
-use super::{camera::Camera, Component};
+use super::{camera::Camera, transform::Transform, Component};
 
 pub struct ShapeRenderer {
     mesh: Mesh<Vertex2PT, TriangleIndex>,
@@ -35,25 +35,33 @@ impl ShapeRendererSystem {
     }
 }
 
+pub type ShapeAndTransform<'a> = (&'a Component<ShapeRenderer>, &'a Component<Transform>);
+
 impl ShapeRendererSystem {
-    pub fn render<'a>(
-        &self,
-        shapes: impl Iterator<Item = &'a mut Component<ShapeRenderer>>,
-        camera: &Camera,
-    ) {
+    pub fn render<'a>(&self, shapes: &[ShapeAndTransform], camera: &Camera) {
         unsafe {
             self.shader.load_mvp(&camera.vp_mat());
-            shapes.for_each(|Component::<ShapeRenderer> { component, .. }| {
-                component.mesh.bind();
-                self.shader.bind_material(&component.material);
+            shapes.iter().for_each(
+                |(
+                    Component::<ShapeRenderer> {
+                        component: shape, ..
+                    },
+                    Component::<Transform> {
+                        component: transform,
+                        ..
+                    },
+                )| {
+                    shape.mesh.bind();
+                    self.shader.bind_material(&shape.material);
 
-                gl::DrawElements(
-                    component.mesh.primitive_type(),
-                    component.mesh.count() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
-            });
+                    gl::DrawElements(
+                        shape.mesh.primitive_type(),
+                        shape.mesh.count() as i32,
+                        gl::UNSIGNED_INT,
+                        ptr::null(),
+                    );
+                },
+            );
         }
     }
 }

@@ -76,12 +76,12 @@ impl RootResourceManager {
             |shaders: Result<HashMap<String, Resource<ShaderProgram<UiShader>>>, GameError>,
              (shader_name, shader_source)| {
                 let mut shaders = shaders?;
+                self.logger
+                    .log_info(&format!("Loading shader: {}", shader_name));
                 shaders.insert(
                     shader_name.clone(),
                     Resource::new(&shader_name, ShaderProgram::load(&shader_source)?),
                 );
-                self.logger
-                    .log_info(&format!("Loaded shader: {}", shader_name));
                 Ok(shaders)
             },
         )?;
@@ -94,6 +94,7 @@ impl RootResourceManager {
         game_dir.pop();
         game_dir.pop();
         game_dir.push("flux");
+        game_dir.push("assets");
         Ok(game_dir)
     }
 
