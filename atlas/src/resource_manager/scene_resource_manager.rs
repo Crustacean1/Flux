@@ -1,14 +1,9 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use glad_gl::gl;
-
-use crate::{
-    game_root::GameError,
-    graphics::{graphics_context::GraphicsContext, material::TextureMaterial},
-};
+use crate::{game_root::GameError, graphics::material::TextureMaterial};
 
 use super::{
-    indexer::index_resources, resource::Resource, texture::index_textures, ResourceManager,
+    indexer::index_resources, resource::Resource, texture::collect_textures, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -17,22 +12,15 @@ pub enum LazyResource<T> {
 }
 
 pub struct SceneResourceManager {
-    texture_unit_count: u32,
-    next_texture_unit: u32,
-
     textures: HashMap<String, LazyResource<Resource<TextureMaterial>>>,
 }
 
 impl SceneResourceManager {
-    pub fn build(graphics_context: &GraphicsContext) -> Result<Self, GameError> {
+    pub fn build() -> Result<Self, GameError> {
         let resource_groups = index_resources(&Self::root_path()?)?;
-        let textures = index_textures(resource_groups);
+        let textures = collect_textures(resource_groups);
 
-        Ok(SceneResourceManager {
-            texture_unit_count: graphics_context.texture_unit_count(),
-            next_texture_unit: gl::TEXTURE0,
-            textures,
-        })
+        Ok(SceneResourceManager { textures })
     }
 
     fn root_path() -> Result<PathBuf, GameError> {
@@ -52,14 +40,7 @@ impl ResourceManager<TextureMaterial> for SceneResourceManager {
             match lazy_material {
                 LazyResource::Loaded(material) => Ok(material.clone()),
                 LazyResource::Unloaded(filepath) => {
-                    let texture_unit = if self.next_texture_unit == self.texture_unit_count {
-                        return Err(GameError::new(&format!("Exhausted texture units")));
-                    } else {
-                        self.next_texture_unit += 1;
-                        self.next_texture_unit - 1
-                    };
-
-                    let new_material = TextureMaterial::from_file(filepath, texture_unit)?;
+                    let new_material = TextureMaterial::from_file(filepath)?;
                     let new_material_resource = Resource::new(
                         filepath.file_stem().unwrap().to_str().unwrap(),
                         new_material,

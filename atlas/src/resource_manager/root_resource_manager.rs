@@ -1,24 +1,16 @@
-use std::{
-    collections::HashMap,
-    env,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use std::{collections::HashMap, env, path::PathBuf, rc::Rc};
 
 use crate::{
     game_root::GameError,
     graphics::{
         graphics_context::GraphicsContext,
-        shaders::{ShaderProgram, UiShader},
+        shaders::{ShaderProgram, ShaderSource, SkyboxShader, UiShader},
     },
     logger::Logger,
     scene::Scene,
 };
 
-use super::{
-    indexer::crawl_dirs, resource::Resource, shader::index_shaders, texture::index_textures,
-    ResourceManager,
-};
+use super::{indexer::index_resources, resource::Resource, shader::index_shaders, ResourceManager};
 
 impl From<std::io::Error> for GameError {
     fn from(value: std::io::Error) -> Self {
@@ -26,14 +18,15 @@ impl From<std::io::Error> for GameError {
     }
 }
 
-type SceneInitializer =
-    fn(&mut RootResourceManager, &GraphicsContext) -> Result<Box<dyn Scene>, GameError>;
+pub type SceneInitializer =
+    fn(&mut RootResourceManager, &mut GraphicsContext) -> Result<Box<dyn Scene>, GameError>;
 
 pub struct RootResourceManager {
     logger: Rc<dyn Logger>,
     scene_initializers: HashMap<String, SceneInitializer>,
     /// all shaders are compiled on startup, no need for lazy loading
     ui_shaders: HashMap<String, Resource<ShaderProgram<UiShader>>>,
+    skybox_shaders: HashMap<String, Resource<ShaderProgram<SkyboxShader>>>,
 }
 
 impl RootResourceManager {
@@ -42,6 +35,7 @@ impl RootResourceManager {
             logger,
             scene_initializers: HashMap::new(),
             ui_shaders: HashMap::new(),
+            skybox_shaders: HashMap::new(),
         })
     }
 
@@ -68,12 +62,34 @@ impl RootResourceManager {
     pub fn index_resources(&mut self) -> Result<(), GameError> {
         let root = Self::res_root_path()?;
         self.logger.log_info("indexing resources");
+        let resource_index = index_resources(&root)?;
 
-        let shader_sources = index_shaders(crawl_dirs(&root.join("ui_shaders"))?);
+        self.ui_shaders = resource_index
+            .iter()
+            .find(|index| index.0 == "ui_shaders")
+            .map_or(
+                Err(GameError::new("No ui_shaders found")),
+                |(_, ui_shaders)| self.load_shader(index_shaders(ui_shaders)),
+            )?;
 
-        self.ui_shaders = shader_sources.iter().fold(
+        self.skybox_shaders = resource_index
+            .iter()
+            .find(|index| index.0 == "skybox_shaders")
+            .map_or(
+                Err(GameError::new("No ui_shaders found")),
+                |(_, ui_shaders)| self.load_shader(index_shaders(ui_shaders)),
+            )?;
+
+        Ok(())
+    }
+
+    fn load_shader<T: Clone>(
+        &self,
+        shaders: HashMap<String, ShaderSource>,
+    ) -> Result<HashMap<String, Resource<ShaderProgram<T>>>, GameError> {
+        shaders.iter().fold(
             Ok(HashMap::new()),
-            |shaders: Result<HashMap<String, Resource<ShaderProgram<UiShader>>>, GameError>,
+            |shaders: Result<HashMap<String, Resource<ShaderProgram<T>>>, GameError>,
              (shader_name, shader_source)| {
                 let mut shaders = shaders?;
                 self.logger
@@ -84,8 +100,7 @@ impl RootResourceManager {
                 );
                 Ok(shaders)
             },
-        )?;
-        Ok(())
+        )
     }
 
     fn res_root_path() -> Result<PathBuf, GameError> {
@@ -101,7 +116,7 @@ impl RootResourceManager {
     pub fn get_scene(
         &mut self,
         res_id: &str,
-        graphics_context: &GraphicsContext,
+        graphics_context: &mut GraphicsContext,
     ) -> Result<Box<dyn Scene>, GameError> {
         if let Some(scene_initializer) = self.scene_initializers.get(res_id) {
             match scene_initializer(self, graphics_context) {
@@ -120,6 +135,16 @@ impl RootResourceManager {
 impl ResourceManager<ShaderProgram<UiShader>> for RootResourceManager {
     fn get(&mut self, res_id: &str) -> Result<Resource<ShaderProgram<UiShader>>, GameError> {
         if let Some(shader) = self.ui_shaders.get(res_id) {
+            Ok(shader.clone())
+        } else {
+            Err(GameError::new(&format!("No shader with id: {}", res_id)))
+        }
+    }
+}
+
+impl ResourceManager<ShaderProgram<SkyboxShader>> for RootResourceManager {
+    fn get(&mut self, res_id: &str) -> Result<Resource<ShaderProgram<SkyboxShader>>, GameError> {
+        if let Some(shader) = self.skybox_shaders.get(res_id) {
             Ok(shader.clone())
         } else {
             Err(GameError::new(&format!("No shader with id: {}", res_id)))

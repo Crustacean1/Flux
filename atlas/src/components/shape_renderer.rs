@@ -35,33 +35,26 @@ impl ShapeRendererSystem {
     }
 }
 
-pub type ShapeAndTransform<'a> = (&'a Component<ShapeRenderer>, &'a Component<Transform>);
+pub type ShapeAndTransform<'a> = (&'a Transform, &'a ShapeRenderer);
 
 impl ShapeRendererSystem {
-    pub fn render<'a>(&self, shapes: &[ShapeAndTransform], camera: &Camera) {
+    pub fn render<'a>(&self, shapes: impl Iterator<Item = ShapeAndTransform<'a>>, camera: &Camera) {
         unsafe {
-            self.shader.load_mvp(&camera.vp_mat());
-            shapes.iter().for_each(
-                |(
-                    Component::<ShapeRenderer> {
-                        component: shape, ..
-                    },
-                    Component::<Transform> {
-                        component: transform,
-                        ..
-                    },
-                )| {
-                    shape.mesh.bind();
-                    self.shader.bind_material(&shape.material);
+            let vp = camera.vp_mat();
+            shapes.for_each(|(transform, shape)| {
+                let mvp = vp * transform.model();
+                self.shader.load_mvp(&mvp.to_cols_array());
+                shape.material.bind();
+                shape.mesh.bind();
+                self.shader.bind_material(&shape.material);
 
-                    gl::DrawElements(
-                        shape.mesh.primitive_type(),
-                        shape.mesh.count() as i32,
-                        gl::UNSIGNED_INT,
-                        ptr::null(),
-                    );
-                },
-            );
+                gl::DrawElements(
+                    shape.mesh.primitive_type(),
+                    shape.mesh.count() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            });
         }
     }
 }

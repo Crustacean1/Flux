@@ -198,7 +198,35 @@ impl ShaderProgram<UiShader> {
             gl::UseProgram(self.shader_id);
             let mat_texture =
                 gl::GetUniformLocation(self.shader_id, mem::transmute("mat_texture\0".as_ptr()));
-            gl::Uniform1ui(mat_texture, material.texture());
+            match mat_texture {
+                -1 => {
+                    println!("Failed to load uniform: 'mat_texture'");
+                }
+                _ => {
+                    gl::Uniform1i(mat_texture, material.texture() as i32);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct SkyboxShader;
+
+impl ShaderProgram<SkyboxShader> {
+    pub fn bind_material(&self, material: &TextureMaterial) {
+        unsafe {
+            gl::UseProgram(self.shader_id);
+            let mat_texture =
+                gl::GetUniformLocation(self.shader_id, mem::transmute("mat_texture\0".as_ptr()));
+            match mat_texture {
+                -1 => {
+                    println!("Failed to load uniform: 'mat_texture'");
+                }
+                _ => {
+                    gl::Uniform1i(mat_texture, material.texture() as i32);
+                }
+            }
         }
     }
 }

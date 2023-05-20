@@ -24,7 +24,7 @@ pub fn index_resources(root: &PathBuf) -> Result<Vec<(String, Vec<PathBuf>)>, Ga
     Ok(subdirs)
 }
 
-pub fn crawl_dirs(root: &PathBuf) -> Result<Vec<PathBuf>, GameError> {
+fn crawl_dirs(root: &PathBuf) -> Result<Vec<PathBuf>, GameError> {
     let local_resources = find_local_resources(root)?;
 
     let entries = fs::read_dir(root.as_path())?;

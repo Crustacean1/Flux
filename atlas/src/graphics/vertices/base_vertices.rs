@@ -16,6 +16,58 @@ pub struct Vertex2PT {
     tex: [f32; 2],
 }
 
+#[derive(Vertex, Debug)]
+#[repr(C)]
+pub struct Vertex3PT {
+    pos: [f32; 3],
+    tex: [f32; 2],
+}
+
+impl Shapely for Vertex3PT {
+    type Attribute = Vertex3PT;
+
+    fn skybox(side: f32) -> Vec<Vertex3PT> {
+        vec![
+            Vertex3PT {
+                pos: [-side, -side, -side],
+                tex: [0.0, 0.0],
+            },
+            Vertex3PT {
+                pos: [-side, side, -side],
+                tex: [0.0, 1.0],
+            },
+            Vertex3PT {
+                pos: [side, side, -side],
+                tex: [1.0, 1.0],
+            },
+            Vertex3PT {
+                pos: [side, -side, -side],
+                tex: [1.0, 0.0],
+            },
+            Vertex3PT {
+                pos: [-side, -side, side],
+                tex: [0.0, 0.0],
+            },
+            Vertex3PT {
+                pos: [-side, side, side],
+                tex: [0.0, 1.0],
+            },
+            Vertex3PT {
+                pos: [side, side, side],
+                tex: [1.0, 1.0],
+            },
+            Vertex3PT {
+                pos: [side, -side, side],
+                tex: [1.0, 0.0],
+            },
+        ]
+    }
+
+    fn gen_quad(width: f32, height: f32) -> Vec<Self::Attribute> {
+        todo!()
+    }
+}
+
 impl Shapely for Vertex2P {
     type Attribute = Vertex2P;
     fn gen_quad(width: f32, height: f32) -> Vec<Vertex2P> {
@@ -35,6 +87,10 @@ impl Shapely for Vertex2P {
             },
         ]
     }
+
+    fn skybox(side: f32) -> Vec<Self::Attribute> {
+        todo!()
+    }
 }
 
 impl Shapely for Vertex2PT {
@@ -43,21 +99,25 @@ impl Shapely for Vertex2PT {
         vec![
             Vertex2PT {
                 pos: [-width, -height],
-                tex: [0.0,1.0]
+                tex: [0.0, 0.0],
             },
             Vertex2PT {
                 pos: [width, -height],
-                tex: [1.0,1.0]
+                tex: [1.0, 0.0],
             },
             Vertex2PT {
                 pos: [width, height],
-                tex: [1.0,0.0]
+                tex: [1.0, 1.0],
             },
             Vertex2PT {
                 pos: [-width, height],
-                tex: [0.0,0.0]
+                tex: [0.0, 1.0],
             },
         ]
+    }
+
+    fn skybox(side: f32) -> Vec<Self::Attribute> {
+        todo!()
     }
 }
 
@@ -95,5 +155,11 @@ impl Shapely for TriangleIndex {
                 triangle: [2, 3, 0],
             },
         ]
+    }
+
+    fn skybox(side: f32) -> Vec<Self::Attribute> {
+        vec![TriangleIndex {
+            triangle: [0, 1, 2],
+        }]
     }
 }

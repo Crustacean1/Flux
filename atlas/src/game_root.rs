@@ -4,7 +4,7 @@ use crate::{
     graphics::graphics_context::GraphicsContext,
     logger::{console_logger::ConsoleLogger, Logger},
     resource_manager::{root_resource_manager::RootResourceManager, ResourceError},
-    scene::{Scene, SceneAction},
+    scene::{Scene, SceneEvent},
 };
 
 #[derive(Clone)]
@@ -61,7 +61,7 @@ impl GameRoot {
         loop {
             let mut scene: Box<dyn Scene> = match self
                 .root_resource_manager
-                .get_scene(&next_scene, &self.graphics_context)
+                .get_scene(&next_scene, &mut self.graphics_context)
             {
                 Ok(scene) => scene,
                 Err(e) => {
@@ -73,12 +73,13 @@ impl GameRoot {
                     return;
                 }
             };
-            match scene.run(self.logger.clone(), &mut self.graphics_context) {
-                SceneAction::Exit => {
+
+            match scene.run(&mut self.graphics_context) {
+                SceneEvent::Exit => {
                     self.logger.log_info("Exiting the game");
                     break;
                 }
-                SceneAction::NewScene(scene) => {
+                SceneEvent::NewScene(scene) => {
                     self.logger
                         .log_info(&format!("Transitioning to: {}", scene));
                     next_scene = String::from(scene);

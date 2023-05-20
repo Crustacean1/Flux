@@ -23,6 +23,7 @@ impl From<PrimitiveType> for u32 {
 pub trait Shapely {
     type Attribute;
     fn gen_quad(width: f32, height: f32) -> Vec<Self::Attribute>;
+    fn skybox(side: f32) -> Vec<Self::Attribute>;
 }
 
 pub trait Vertex {

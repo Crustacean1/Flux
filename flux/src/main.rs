@@ -1,10 +1,12 @@
 use atlas::{
     game_root::{GameError, GameRoot},
-    resource_manager::root_resource_manager::RootResourceManager,
+    graphics::graphics_context::GraphicsContext,
+    resource_manager::root_resource_manager::{RootResourceManager, SceneInitializer},
+    scene::Scene,
 };
-use scene::main_menu_scene::MainMenuScene;
+use scene::{first_scene::FirstScene, main_menu_scene::MainMenuScene};
 
-mod component_manager;
+mod game_objects;
 mod scene;
 
 fn main() {
@@ -25,7 +27,10 @@ fn start_game() -> Result<(), GameError> {
 }
 
 fn load_scenes(root_resource_manager: &mut RootResourceManager) -> Result<(), GameError> {
-    let scenes = [("main", MainMenuScene::new)];
+    let scenes: [(_, SceneInitializer); 2] = [
+        ("main", MainMenuScene::new),
+        ("first_scene", FirstScene::new),
+    ];
 
     let failed_scenes: Vec<_> = scenes
         .iter()

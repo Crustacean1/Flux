@@ -1,18 +1,12 @@
-use std::rc::Rc;
-
-use crate::{graphics::graphics_context::GraphicsContext, logger::Logger};
+use crate::graphics::graphics_context::GraphicsContext;
 
 #[derive(Clone, Copy)]
-pub enum SceneAction {
+pub enum SceneEvent {
     NewScene(&'static str),
     RestartScene,
     Exit,
 }
 
 pub trait Scene {
-    fn run(
-        &mut self,
-        logger: Rc<dyn Logger>,
-        graphics_context: &mut GraphicsContext,
-    ) -> SceneAction;
+    fn run(&mut self, graphics_context: &mut GraphicsContext) -> SceneEvent;
 }

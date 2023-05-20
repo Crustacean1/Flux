@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::graphics::shaders::ShaderSource;
 
-pub fn index_shaders(files: Vec<PathBuf>) -> HashMap<String, ShaderSource> {
+pub fn index_shaders(files: &Vec<PathBuf>) -> HashMap<String, ShaderSource> {
     let shader_files: Vec<PathBuf> = files
         .iter()
         .filter(|path| shader_resource_filter(path))
