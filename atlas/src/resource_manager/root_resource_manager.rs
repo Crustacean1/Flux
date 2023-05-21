@@ -24,7 +24,6 @@ pub type SceneInitializer =
 pub struct RootResourceManager {
     logger: Rc<dyn Logger>,
     scene_initializers: HashMap<String, SceneInitializer>,
-    /// all shaders are compiled on startup, no need for lazy loading
     ui_shaders: HashMap<String, Resource<ShaderProgram<UiShader>>>,
     skybox_shaders: HashMap<String, Resource<ShaderProgram<SkyboxShader>>>,
 }
@@ -66,18 +65,24 @@ impl RootResourceManager {
 
         self.ui_shaders = resource_index
             .iter()
-            .find(|index| index.0 == "ui_shaders")
+            .find(|(res_type, _)| res_type == "ui_shaders")
             .map_or(
                 Err(GameError::new("No ui_shaders found")),
                 |(_, ui_shaders)| self.load_shader(index_shaders(ui_shaders)),
             )?;
 
+        for (key, value) in self.ui_shaders.iter() {
+            println!("Shader: '{}' with res_id: '{}'", key, value.id());
+        }
+
+        println!("Resource type count: {}", resource_index.len());
+
         self.skybox_shaders = resource_index
             .iter()
-            .find(|index| index.0 == "skybox_shaders")
+            .find(|(res_type, _)| res_type == "skybox_shaders")
             .map_or(
-                Err(GameError::new("No ui_shaders found")),
-                |(_, ui_shaders)| self.load_shader(index_shaders(ui_shaders)),
+                Err(GameError::new("No skybox_shaders found")),
+                |(_, shaders)| self.load_shader(index_shaders(shaders)),
             )?;
 
         Ok(())

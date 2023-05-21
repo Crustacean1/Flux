@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, time::Instant};
+use std::time::Instant;
 
 use atlas::{
     components::{
@@ -72,9 +72,10 @@ impl MainMenuScene {
             .for_each(|event| match event {
                 ContextEvent::Resized(width, height) => {
                     graphics_context.set_viewport(*width, *height);
-                    self.camera.ortho_from_dimensions((*width as f32, *height as f32));
+                    self.camera
+                        .ortho(Frustrum::ui_frustrum(*width as f32, *height as f32));
                 }
-                ContextEvent::Close => self.event_sender.send(SceneEvent::Exit),
+                _ => {}
             })
     }
 
@@ -108,11 +109,7 @@ impl MainMenuScene {
         let (width, height) = graphics_context.dimensions();
 
         let main_scene = MainMenuScene {
-            camera: Camera::ortho(
-                Frustrum::from_size(width as f32, height as f32),
-                glam::Vec3::new(0.0, 0.0, -1.0),
-                glam::Vec3::new(0.0, 0.0, 1.0),
-            ),
+            camera: Camera::new_ortho(Frustrum::ui_frustrum(width as f32, height as f32)),
             entity_manager,
             resource_manager,
             shape_rendering_system,

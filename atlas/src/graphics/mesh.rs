@@ -106,4 +106,10 @@ impl<
         let indices = IndexType::gen_quad(width, height);
         Self::new(&vertices, &indices)
     }
+
+    pub fn skybox(side: f32) -> Self {
+        let vertices = VertexType::skybox(side);
+        let indices = IndexType::skybox(side);
+        Self::new(&vertices, &indices)
+    }
 }

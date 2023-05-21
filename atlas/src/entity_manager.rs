@@ -1,12 +1,12 @@
-mod component_manager;
+mod controller;
 mod menu_button;
+mod skybox;
 
 use crate::components::{
-    button_handler::ButtonHandler, button_trigger::ButtonTrigger, shape_renderer::ShapeRenderer,
+    button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
+    controller::Controller, shape_renderer::ShapeRenderer, skybox_renderer::SkyboxRenderer,
     transform::Transform,
 };
-
-use self::component_manager::ComponentManager;
 
 pub enum ComponentEvent<T> {
     AddComponent(T),
@@ -14,7 +14,7 @@ pub enum ComponentEvent<T> {
 }
 
 pub trait ComponentIterator<'a, T> {
-    fn iter(&'a self) -> Box<(dyn Iterator<Item = T> + 'a)>;
+    fn iter(&'a self) -> &[T];
 }
 
 pub trait EntityManagerTrait<T> {
@@ -25,45 +25,74 @@ pub trait EntityManagerTrait<T> {
 pub struct EntityManager {
     menu_buttons: (
         Vec<usize>,
-        ComponentManager<Transform>,
-        ComponentManager<ShapeRenderer>,
-        ComponentManager<ButtonTrigger>,
-        ComponentManager<Box<dyn ButtonHandler>>,
+        Vec<Transform>,
+        Vec<ShapeRenderer>,
+        Vec<ButtonTrigger>,
+        Vec<Box<dyn ButtonHandler>>,
     ),
+    skyboxes: (Vec<usize>, Vec<SkyboxRenderer>),
+    cameras: (Vec<usize>, Vec<Box<dyn Controller>>, Vec<Camera>),
+
+    transform_shape_iter: Vec<(usize, *const Transform, *const ShapeRenderer)>,
+    trigger_handler_iter: Vec<(usize, *const ButtonTrigger, *const dyn ButtonHandler)>,
+    skybox_iter: Vec<(usize, *const SkyboxRenderer)>,
+    camera_controller_iter: Vec<(usize, *const (dyn Controller), *mut Camera)>,
 
     next_entity_id: usize,
 }
 
 impl EntityManager {
     pub fn new() -> Self {
-        let menu_buttons = (
-            vec![],
-            ComponentManager::<Transform>::new(),
-            ComponentManager::<ShapeRenderer>::new(),
-            ComponentManager::<ButtonTrigger>::new(),
-            ComponentManager::<Box<dyn ButtonHandler>>::new(),
-        );
+        let menu_buttons = (vec![], vec![], vec![], vec![], vec![]);
+        let skyboxes = (vec![], vec![]);
+        let cameras = (vec![], vec![], vec![]);
+
         EntityManager {
             menu_buttons,
+            skyboxes,
             next_entity_id: 0,
+            transform_shape_iter: vec![],
+            trigger_handler_iter: vec![],
+            skybox_iter: vec![],
+            camera_controller_iter: vec![],
+            cameras,
         }
     }
-}
 
-impl<'a> ComponentIterator<'a, (&'a Transform, &'a ShapeRenderer)> for EntityManager {
-    fn iter(&'a self) -> Box<(dyn Iterator<Item = (&'a Transform, &'a ShapeRenderer)> + 'a)> {
-        let transforms = self.menu_buttons.1.iter();
-        let shapes = self.menu_buttons.2.iter();
-        Box::new(transforms.zip(shapes))
+    pub fn get_camera(&self, id: usize) -> Option<&Camera> {
+        let cam_ref = self.cameras.0.iter().position(|&cam_id| cam_id == id)?;
+        Some(&self.cameras.2[cam_ref])
     }
 }
 
-pub type ButtonIterator<'a> = (&'a ButtonTrigger, &'a Box<dyn ButtonHandler>);
+impl<'a> ComponentIterator<'a, (usize, *const Transform, *const ShapeRenderer)> for EntityManager {
+    fn iter(&'a self) -> &'a [(usize, *const Transform, *const ShapeRenderer)] {
+        let transforms = self.menu_buttons.1.iter();
+        let shapes = self.menu_buttons.2.iter();
+        &self.transform_shape_iter
+    }
+}
 
-impl<'a> ComponentIterator<'a, ButtonIterator<'a>> for EntityManager {
-    fn iter(&'a self) -> Box<(dyn Iterator<Item = ButtonIterator> + 'a)> {
-        let button_triggers = self.menu_buttons.3.iter();
-        let button_handlers = self.menu_buttons.4.iter();
-        Box::new(button_triggers.zip(button_handlers))
+impl<'a> ComponentIterator<'a, (usize, *const ButtonTrigger, *const (dyn ButtonHandler + 'a))>
+    for EntityManager
+{
+    fn iter(&'a self) -> &[(usize, *const ButtonTrigger, *const (dyn ButtonHandler + 'a))] {
+        &self.trigger_handler_iter
+    }
+}
+
+pub type Skybox<'a> = &'a SkyboxRenderer;
+
+impl<'a> ComponentIterator<'a, (usize, *const SkyboxRenderer)> for EntityManager {
+    fn iter(&'a self) -> &[(usize, *const SkyboxRenderer)] {
+        &self.skybox_iter
+    }
+}
+
+impl<'a> ComponentIterator<'a, (usize, *const (dyn Controller + 'a), *mut Camera)>
+    for EntityManager
+{
+    fn iter(&'a self) -> &[(usize, *const (dyn Controller + 'a), *mut Camera)] {
+        &self.camera_controller_iter
     }
 }

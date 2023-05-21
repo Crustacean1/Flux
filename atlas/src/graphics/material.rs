@@ -14,17 +14,6 @@ pub enum ChannelLayout {
 }
 
 impl ChannelLayout {
-    pub fn from(path: &PathBuf) -> Option<ChannelLayout> {
-        let extension = path.extension()?;
-        let extension = extension.to_str()?;
-        match extension {
-            "jpg" => Some(ChannelLayout::Rgb),
-            "jpeg" => Some(ChannelLayout::Rgb),
-            "png" => Some(ChannelLayout::Rgba),
-            _ => None,
-        }
-    }
-
     pub fn into_gl(&self) -> u32 {
         match self {
             ChannelLayout::Rgb => gl::RGB,
@@ -68,15 +57,25 @@ impl TextureMaterial {
 
     pub fn from_file(path: &PathBuf) -> Result<TextureMaterial, GameError> {
         let Ok(img) = image::open(path.to_str().unwrap()) else {return Err(GameError::new(&format!("Failed to open texture:\n {:?}", path)))};
-        let Some(channel_layout) = ChannelLayout::from(path) else {return Err(GameError::new(&format!("Failed to read extension: '{:?}'", path)))};
+
+        let channel_layout = match img.color() {
+            image::ColorType::Rgb8 => ChannelLayout::Rgb,
+            image::ColorType::Rgba8 => ChannelLayout::Rgba,
+            _ => {
+                return Err(GameError::new(&format!(
+                    "Failed to read extension: '{:?}'",
+                    path
+                )))
+            }
+        };
 
         let img_data: Result<&[u8], GameError> = match channel_layout {
             ChannelLayout::Rgb => {
-                let Some(data) = img.as_rgb8() else {return Err(GameError::new(&format!("Failed to read data from texture: '{:?}'", path)))};
+                let Some(data) = img.as_rgb8() else {return Err(GameError::new(&format!("Failed to read data from rgb texture: '{:?}'", path)))};
                 Ok(data as &[u8])
             }
             ChannelLayout::Rgba => {
-                let Some(data) = img.as_rgba8() else {return Err(GameError::new(&format!("Failed to read data from texture: '{:?}'", path)))};
+                let Some(data) = img.as_rgba8() else {return Err(GameError::new(&format!("Failed to read data from rgba texture: '{:?}'", path)))};
                 Ok(data as &[u8])
             }
         };

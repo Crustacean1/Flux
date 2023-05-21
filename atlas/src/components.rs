@@ -4,6 +4,7 @@ pub mod camera;
 pub mod shape_renderer;
 pub mod skybox_renderer;
 pub mod transform;
+pub mod controller;
 
 pub trait ComponentType {
     fn component_type_id() -> usize;

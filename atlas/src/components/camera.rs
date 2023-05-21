@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Frustrum {
@@ -22,67 +22,77 @@ impl Frustrum {
         }
     }
 
-    pub fn from_size(width: f32, height: f32) -> Self {
+    pub fn ui_frustrum(width: f32, height: f32) -> Self {
         Frustrum::new(0.0, width as f32, 0.0, height as f32, 0.1, 10.0)
+    }
+
+    pub fn centered_frustrum(width: f32, height: f32, near: f32, far: f32) -> Self {
+        Frustrum::new(
+            -width * 0.5,
+            width * 0.5,
+            -height * 0.5,
+            height * 0.5,
+            near,
+            far,
+        )
     }
 }
 
 pub struct Camera {
-    pub pos: Vec3,
-    pub dir: Vec3,
-
     projection: Mat4,
     view: Mat4,
     vp_mat: Mat4,
-
-    frustrum: Frustrum,
 }
 
 impl Camera {
-    pub fn ortho(frustrum: Frustrum, pos: Vec3, dir: Vec3) -> Self {
-        let mut camera = Camera {
-            pos,
-            dir,
-            frustrum,
-            projection: Mat4::IDENTITY,
-            view: Mat4::IDENTITY,
-            vp_mat: Mat4::IDENTITY,
-        };
-
-        camera.set_frustrum(frustrum);
+    pub fn new_ortho(frustrum: Frustrum) -> Self {
+        let mut camera = Self::new();
+        camera.orth_projection(frustrum);
         camera
     }
 
-    pub fn persp(frustrum: Frustrum, pos: Vec3, dir: Vec3) -> Self {
-        todo!()
+    pub fn new_persp(frustrum: Frustrum, pos: Vec3, dir: Vec3) -> Self {
+        let mut camera = Self::new();
+        camera.persp_projection(frustrum);
+        println!("Matrix to understand: {:?}", camera.vp_mat);
+        camera
     }
 
-    pub fn vp_mat(&self) -> Mat4 {
-        self.vp_mat
+    pub fn ortho(&mut self, frustrum: Frustrum) {
+        self.orth_projection(frustrum);
     }
 
-    fn set_frustrum(&mut self, frustrum: Frustrum) {
-        self.frustrum = frustrum;
-        self.projection = self.orth_projection();
+    pub fn persp(&mut self, frustrum: Frustrum) {
+        self.persp_projection(frustrum);
+    }
+
+    pub fn view(&mut self, right: Vec3, up: Vec3, forward: Vec3, pos: Vec3) {
+        //self.view = Mat4::look_to_rh(pos, dir, Vec3::new(0.0, 1.0, 0.0));
+        *self.view.col_mut(0) = Vec4::new(right.x, up.x, forward.x, 0.0);
+        *self.view.col_mut(1) = Vec4::new(right.y, up.y, forward.y, 0.0);
+        *self.view.col_mut(2) = Vec4::new(right.z, up.z, forward.z, 0.0);
+        *self.view.col_mut(3) = Vec4::new(0.0, 0.0, 0.0, 1.0);
+        self.view = self.view * Mat4::from_translation(pos);
         self.vp_mat = self.projection * self.view;
     }
 
-    pub fn ortho_from_dimensions(&mut self, (width, height): (f32, f32)) {
-        self.set_frustrum(Frustrum::new(
-            0.0,
-            width as f32,
-            0.0,
-            height as f32,
-            1.0,
-            10.0,
-        ));
+    pub fn pv_mat(&self) -> Mat4 {
+        self.vp_mat
     }
 
-    fn orth_projection(&self) -> Mat4 {
+    fn new() -> Self {
+        Camera {
+            projection: Mat4::IDENTITY,
+            view: Mat4::IDENTITY,
+            vp_mat: Mat4::IDENTITY,
+        }
+    }
+
+    fn orth_projection(&mut self, frustrum: Frustrum) {
         let mut proj = Mat4::IDENTITY;
-        let (near, far) = (self.frustrum.near, self.frustrum.far);
-        let (left, right) = (self.frustrum.left, self.frustrum.right);
-        let (top, bottom) = (self.frustrum.top, self.frustrum.bottom);
+        let (near, far) = (frustrum.near, frustrum.far);
+        let (left, right) = (frustrum.left, frustrum.right);
+        let (top, bottom) = (frustrum.top, frustrum.bottom);
 
         *proj.col_mut(0) = Vec4::new(2.0 / (right - left), 0.0, 0.0, 0.0);
         *proj.col_mut(1) = Vec4::new(0.0, 2.0 / (top - bottom), 0.0, 0.0);
@@ -93,24 +103,18 @@ impl Camera {
             0.0,
             1.0,
         );
-        proj
+
+        self.projection = proj;
+        self.vp_mat = self.projection * self.view;
     }
 
-    fn persp_projection(&self) -> Mat4 {
-        let mut proj = Mat4::IDENTITY;
-        let (near, far) = (self.frustrum.near, self.frustrum.far);
-        let (left, right) = (self.frustrum.left, self.frustrum.right);
-        let (top, bottom) = (self.frustrum.top, self.frustrum.bottom);
-
-        *proj.col_mut(0) = Vec4::new(2.0 * near / (right - left), 0.0, 0.0, 0.0);
-        *proj.col_mut(1) = Vec4::new(0.0, 2.0 * near / (top - bottom), 0.0, 0.0);
-        *proj.col_mut(2) = Vec4::new(
-            (right + left) / (right - left),
-            (top + bottom) / (top - bottom),
-            (far + near) / (near - far),
-            -1.0,
+    fn persp_projection(&mut self, frustrum: Frustrum) {
+        self.projection = Mat4::perspective_rh_gl(
+            1.5,
+            (frustrum.left - frustrum.right) / (frustrum.top - frustrum.bottom),
+            0.1,
+            100.0,
         );
-        *proj.col_mut(3) = Vec4::new(0.0, 0.0, 2.0 * far * near / (near - far), 0.0);
-        proj
+        self.vp_mat = self.projection * self.view;
     }
 }

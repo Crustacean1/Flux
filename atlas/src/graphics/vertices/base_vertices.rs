@@ -27,40 +27,30 @@ impl Shapely for Vertex3PT {
     type Attribute = Vertex3PT;
 
     fn skybox(side: f32) -> Vec<Vertex3PT> {
-        vec![
-            Vertex3PT {
-                pos: [-side, -side, -side],
-                tex: [0.0, 0.0],
-            },
-            Vertex3PT {
-                pos: [-side, side, -side],
-                tex: [0.0, 1.0],
-            },
-            Vertex3PT {
-                pos: [side, side, -side],
-                tex: [1.0, 1.0],
-            },
-            Vertex3PT {
-                pos: [side, -side, -side],
-                tex: [1.0, 0.0],
-            },
-            Vertex3PT {
-                pos: [-side, -side, side],
-                tex: [0.0, 0.0],
-            },
-            Vertex3PT {
-                pos: [-side, side, side],
-                tex: [0.0, 1.0],
-            },
-            Vertex3PT {
-                pos: [side, side, side],
-                tex: [1.0, 1.0],
-            },
-            Vertex3PT {
-                pos: [side, -side, side],
-                tex: [1.0, 0.0],
-            },
-        ]
+        (0..3)
+            .map(|j| {
+                (0..8).map(move |i| Vertex3PT {
+                    pos: [
+                        if ((i >> 0) & 1) == 1 { side } else { -side },
+                        if ((i >> 1) & 1) == 1 { side } else { -side },
+                        if ((i >> 2) & 1) == 1 { side } else { -side },
+                    ],
+                    tex: [
+                        if ((i >> 0) & 1) == if j == 1 { 0 } else { ((i >> 2) & 1) } {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        if ((i >> 1) & 1) == if j == 0 { ((i >> 2) & 1) } else { 0 } {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                    ],
+                })
+            })
+            .flatten()
+            .collect()
     }
 
     fn gen_quad(width: f32, height: f32) -> Vec<Self::Attribute> {
@@ -158,8 +148,46 @@ impl Shapely for TriangleIndex {
     }
 
     fn skybox(side: f32) -> Vec<Self::Attribute> {
-        vec![TriangleIndex {
-            triangle: [0, 1, 2],
-        }]
+        vec![
+            TriangleIndex {
+                triangle: [0, 1, 3],
+            },
+            TriangleIndex {
+                triangle: [3, 2, 0],
+            },
+            TriangleIndex {
+                triangle: [4, 5, 7],
+            },
+            TriangleIndex {
+                triangle: [7, 6, 4],
+            },
+            /*************************/
+            TriangleIndex {
+                triangle: [0, 4, 5],
+            },
+            TriangleIndex {
+                triangle: [0, 5, 1],
+            },
+            TriangleIndex {
+                triangle: [3, 7, 2],
+            },
+            TriangleIndex {
+                triangle: [2, 7, 6],
+            },
+            /*************************/
+            TriangleIndex {
+                triangle: [0, 4, 2],
+            },
+            TriangleIndex {
+                triangle: [4, 6, 2],
+            },
+            TriangleIndex {
+                triangle: [1, 5, 3],
+            },
+            TriangleIndex {
+                triangle: [5, 7, 3],
+            },
+            /*************************/
+        ]
     }
 }

@@ -9,7 +9,7 @@ use crate::graphics::{
     vertices::base_vertices::{TriangleIndex, Vertex2PT},
 };
 
-use super::{camera::Camera, transform::Transform, Component};
+use super::{camera::Camera, transform::Transform};
 
 pub struct ShapeRenderer {
     mesh: Mesh<Vertex2PT, TriangleIndex>,
@@ -38,10 +38,17 @@ impl ShapeRendererSystem {
 pub type ShapeAndTransform<'a> = (&'a Transform, &'a ShapeRenderer);
 
 impl ShapeRendererSystem {
-    pub fn render<'a>(&self, shapes: impl Iterator<Item = ShapeAndTransform<'a>>, camera: &Camera) {
+    pub fn render<'a>(
+        &self,
+        shapes: &[(usize, *const Transform, *const ShapeRenderer)],
+        camera: &Camera,
+    ) {
         unsafe {
-            let vp = camera.vp_mat();
-            shapes.for_each(|(transform, shape)| {
+            let vp = camera.pv_mat();
+            shapes.iter().for_each(|(_, transform, shape)| {
+                let transform = &**transform;
+                let shape = &**shape;
+
                 let mvp = vp * transform.model();
                 self.shader.load_mvp(&mvp.to_cols_array());
                 shape.material.bind();

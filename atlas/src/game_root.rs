@@ -7,7 +7,7 @@ use crate::{
     scene::{Scene, SceneEvent},
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct GameError {
     msg: String,
 }
@@ -57,7 +57,7 @@ impl GameRoot {
     }
 
     pub fn run(&mut self) {
-        let mut next_scene = String::from("main");
+        let mut next_scene = String::from("first_scene");
         loop {
             let mut scene: Box<dyn Scene> = match self
                 .root_resource_manager

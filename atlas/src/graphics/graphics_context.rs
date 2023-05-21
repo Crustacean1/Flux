@@ -1,11 +1,12 @@
 use std::sync::mpsc::Receiver;
 
 use glad_gl::gl;
-use glfw::{Context, Glfw, InitError, WindowEvent};
+use glfw::{Action, Context, Glfw, InitError, WindowEvent};
 
 use crate::{
     event_bus::{EventSender, EventSenderTrait},
     game_root::GameError,
+    scene::SceneEvent,
 };
 
 pub struct GraphicsContext {
@@ -14,6 +15,7 @@ pub struct GraphicsContext {
     window: glfw::Window,
     event_channel: Receiver<(f64, WindowEvent)>,
     tracked_mouse_pos: (f32, f32),
+    tracked_keys: Vec<u8>,
 }
 
 impl From<InitError> for GameError {
@@ -30,6 +32,8 @@ pub enum IoEvent {
     LeftMouseRelease((f32, f32)),
     RightMousePress((f32, f32)),
     RightMouseRelease((f32, f32)),
+    KeyPressed(u8),
+    KeyHeld(u8),
     Other,
 }
 
@@ -74,6 +78,7 @@ impl GraphicsContext {
         window.set_cursor_pos_polling(true);
         window.set_size_polling(true);
         window.set_mouse_button_polling(true);
+        window.set_key_polling(true);
 
         gl::load(|e| glfw.get_proc_address_raw(e) as *const std::os::raw::c_void);
 
@@ -82,12 +87,15 @@ impl GraphicsContext {
             gl::Enable(gl::DEPTH_TEST);
         }
 
+        let tracked_keys = vec![];
+
         Ok(GraphicsContext {
             title: String::from(title),
             window,
             event_channel,
             glfw,
             tracked_mouse_pos: (0.0, 0.0),
+            tracked_keys,
         })
     }
 
@@ -105,13 +113,39 @@ impl GraphicsContext {
                 event_sender.send(IoEvent::RightMousePress(self.tracked_mouse_pos));
             }
             WindowEvent::Close => {
-                event_sender.send(ContextEvent::Close);
+                event_sender.send(SceneEvent::Exit);
             }
             WindowEvent::Size(width, height) => {
                 event_sender.send(ContextEvent::Resized(width, height));
             }
+            WindowEvent::Key(glfw::Key::Escape, _, Action::Release, _) => {
+                event_sender.send(ContextEvent::Close);
+            }
+            WindowEvent::Key(key, _, Action::Press, _) => {
+                event_sender.send(IoEvent::KeyPressed(key as u8));
+                self.tracked_keys.push(key as u8);
+            }
+            WindowEvent::Key(key, _, Action::Release, _) => {
+                if let Some(tracked_key) = self
+                    .tracked_keys
+                    .iter()
+                    .position(|key_id| *key_id == key as u8)
+                {
+                    self.tracked_keys.remove(tracked_key);
+                }
+            }
             _ => {}
         });
+        self.tracked_keys
+            .iter()
+            .for_each(|&key| event_sender.send(IoEvent::KeyHeld(key)))
+    }
+
+    pub fn cursor_lock(&mut self, lock: bool) {
+        match lock {
+            true => self.window.set_cursor_mode(glfw::CursorMode::Disabled),
+            false => self.window.set_cursor_mode(glfw::CursorMode::Normal),
+        }
     }
 
     pub fn set_viewport(&self, width: i32, height: i32) {

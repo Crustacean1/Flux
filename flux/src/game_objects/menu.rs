@@ -46,7 +46,7 @@ pub fn create_main_menu(
             Transform::pos(Vec3::new(width as f32 * 0.5, height as f32 * 0.5, 0.0)),
             ShapeRenderer::quad((width as f32 * 0.5, height as f32 * 0.5), main_screen.res),
             ButtonTrigger::new(0, (0.0, 0.0), (width as f32, height as f32)),
-            Box::new(BackgroundHandler::new()),
+            Box::new(BackgroundHandler::new()) as Box<dyn ButtonHandler>,
         ));
     }
 
@@ -90,6 +90,6 @@ fn add_menu_entry(
         Transform::pos(pos),
         ShapeRenderer::quad((128.0, 32.0), material.res.clone()),
         ButtonTrigger::new(1, (pos.x, pos.y), (128.0, 32.0)),
-        Box::new(PlayHandler::new()),
+        Box::new(PlayHandler::new()) as Box<dyn ButtonHandler>,
     ));
 }
