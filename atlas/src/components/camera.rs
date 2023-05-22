@@ -54,7 +54,6 @@ impl Camera {
     pub fn new_persp(frustrum: Frustrum, pos: Vec3, dir: Vec3) -> Self {
         let mut camera = Self::new();
         camera.persp_projection(frustrum);
-        println!("Matrix to understand: {:?}", camera.vp_mat);
         camera
     }
 
@@ -110,11 +109,12 @@ impl Camera {
 
     fn persp_projection(&mut self, frustrum: Frustrum) {
         self.projection = Mat4::perspective_rh_gl(
-            1.5,
+            1.0,
             (frustrum.left - frustrum.right) / (frustrum.top - frustrum.bottom),
             0.1,
             100.0,
         );
+        println!("Perspective: {}", self.projection);
         self.vp_mat = self.projection * self.view;
     }
 }

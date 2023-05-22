@@ -1,6 +1,13 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use crate::{game_root::GameError, graphics::material::TextureMaterial};
+use crate::{
+    game_root::GameError,
+    graphics::{
+        material::TextureMaterial,
+        mesh::Mesh,
+        vertices::base_vertices::{TriangleIndex, Vertex3PT},
+    },
+};
 
 use super::{
     indexer::index_resources, resource::Resource, texture::collect_textures, ResourceManager,
@@ -53,5 +60,11 @@ impl ResourceManager<TextureMaterial> for SceneResourceManager {
         } else {
             Err(GameError::new(&format!("No material with id: {}", res_id)))
         }
+    }
+}
+
+impl ResourceManager<Mesh<Vertex3PT, TriangleIndex>> for SceneResourceManager {
+    fn get(&mut self, res_id: &str) -> Result<Resource<Mesh<Vertex3PT, TriangleIndex>>, GameError> {
+        todo!()
     }
 }

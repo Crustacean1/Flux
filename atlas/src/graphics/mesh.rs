@@ -8,6 +8,7 @@ use glad_gl::gl;
 
 use super::vertices::{Index, Shapely, Vertex};
 
+#[derive(Clone, Copy)]
 pub struct Mesh<
     VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
     IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,

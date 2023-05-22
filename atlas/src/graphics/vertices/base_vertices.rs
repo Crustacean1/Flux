@@ -16,7 +16,7 @@ pub struct Vertex2PT {
     tex: [f32; 2],
 }
 
-#[derive(Vertex, Debug)]
+#[derive(Vertex, Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Vertex3PT {
     pos: [f32; 3],
@@ -35,18 +35,23 @@ impl Shapely for Vertex3PT {
                         if ((i >> 1) & 1) == 1 { side } else { -side },
                         if ((i >> 2) & 1) == 1 { side } else { -side },
                     ],
-                    tex: [
-                        if ((i >> 0) & 1) == if j == 1 { 0 } else { ((i >> 2) & 1) } {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                        if ((i >> 1) & 1) == if j == 0 { ((i >> 2) & 1) } else { 0 } {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                    ],
+                    tex: match j {
+                        0 => [
+                            if ((i >> 0) & 1) == 1 { 1.0 } else { 0.0 },
+                            if ((i >> 1) & 1) == 1 { 1.0 } else { 0.0 },
+                        ],
+                        1 => [
+                            if ((i >> 0) & 1) == 0 { 1.0 } else { 0.0 },
+                            if ((i >> 2) & 1) == 1 { 1.0 } else { 0.0 },
+                        ],
+                        2 => [
+                            if ((i >> 1) & 1) == 1 { 1.0 } else { 0.0 },
+                            if ((i >> 2) & 1) == 1 { 1.0 } else { 0.0 },
+                        ],
+                        _ => {
+                            panic!()
+                        }
+                    },
                 })
             })
             .flatten()
@@ -111,7 +116,7 @@ impl Shapely for Vertex2PT {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct TriangleIndex {
     triangle: [u32; 3],
@@ -163,29 +168,29 @@ impl Shapely for TriangleIndex {
             },
             /*************************/
             TriangleIndex {
-                triangle: [0, 4, 5],
+                triangle: [0 + 8, 4 + 8, 5 + 8],
             },
             TriangleIndex {
-                triangle: [0, 5, 1],
+                triangle: [0 + 8, 5 + 8, 1 + 8],
             },
             TriangleIndex {
-                triangle: [3, 7, 2],
+                triangle: [3 + 8, 7 + 8, 2 + 8],
             },
             TriangleIndex {
-                triangle: [2, 7, 6],
+                triangle: [2 + 8, 7 + 8, 6 + 8],
             },
             /*************************/
             TriangleIndex {
-                triangle: [0, 4, 2],
+                triangle: [0 + 16, 4 + 16, 2 + 16],
             },
             TriangleIndex {
-                triangle: [4, 6, 2],
+                triangle: [4 + 16, 6 + 16, 2 + 16],
             },
             TriangleIndex {
-                triangle: [1, 5, 3],
+                triangle: [1 + 16, 5 + 16, 3 + 16],
             },
             TriangleIndex {
-                triangle: [5, 7, 3],
+                triangle: [5 + 16, 7 + 16, 3 + 16],
             },
             /*************************/
         ]
