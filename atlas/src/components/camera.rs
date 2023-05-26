@@ -40,8 +40,10 @@ impl Frustrum {
 
 pub struct Camera {
     projection: Mat4,
-    view: Mat4,
-    vp_mat: Mat4,
+    view_dir: Mat4,
+    view_pos: Mat4,
+    view_projection_mat: Mat4,
+    static_projection_view_mat: Mat4,
 }
 
 impl Camera {
@@ -65,26 +67,33 @@ impl Camera {
         self.persp_projection(frustrum);
     }
 
-    pub fn view(&mut self, right: Vec3, up: Vec3, forward: Vec3, pos: Vec3) {
-        //self.view = Mat4::look_to_rh(pos, dir, Vec3::new(0.0, 1.0, 0.0));
-        *self.view.col_mut(0) = Vec4::new(right.x, up.x, forward.x, 0.0);
-        *self.view.col_mut(1) = Vec4::new(right.y, up.y, forward.y, 0.0);
-        *self.view.col_mut(2) = Vec4::new(right.z, up.z, forward.z, 0.0);
-        *self.view.col_mut(3) = Vec4::new(0.0, 0.0, 0.0, 1.0);
-        self.view = self.view * Mat4::from_translation(pos);
-        self.vp_mat = self.projection * self.view;
+    pub fn projection_view_mat(&self) -> Mat4 {
+        self.view_projection_mat
     }
 
-    pub fn pv_mat(&self) -> Mat4 {
-        self.vp_mat
+    pub fn static_projection_view_mat(&self) -> Mat4 {
+        self.static_projection_view_mat
     }
 
     fn new() -> Self {
         Camera {
             projection: Mat4::IDENTITY,
-            view: Mat4::IDENTITY,
-            vp_mat: Mat4::IDENTITY,
+            view_projection_mat: Mat4::IDENTITY,
+            view_dir: Mat4::IDENTITY,
+            view_pos: Mat4::IDENTITY,
+            static_projection_view_mat: Mat4::IDENTITY,
         }
+    }
+
+    pub fn view(&mut self, right: Vec3, up: Vec3, forward: Vec3, pos: Vec3) {
+        *self.view_dir.col_mut(0) = Vec4::new(right.x, up.x, forward.x, 0.0);
+        *self.view_dir.col_mut(1) = Vec4::new(right.y, up.y, forward.y, 0.0);
+        *self.view_dir.col_mut(2) = Vec4::new(right.z, up.z, forward.z, 0.0);
+        *self.view_dir.col_mut(3) = Vec4::new(0.0, 0.0, 0.0, 1.0);
+        self.view_pos = Mat4::IDENTITY;
+        *self.view_pos.col_mut(3) = Vec4::new(pos.x, pos.y, pos.z, 1.0);
+
+        self.update();
     }
 
     fn orth_projection(&mut self, frustrum: Frustrum) {
@@ -104,7 +113,7 @@ impl Camera {
         );
 
         self.projection = proj;
-        self.vp_mat = self.projection * self.view;
+        self.update()
     }
 
     fn persp_projection(&mut self, frustrum: Frustrum) {
@@ -114,7 +123,11 @@ impl Camera {
             0.1,
             100.0,
         );
-        println!("Perspective: {}", self.projection);
-        self.vp_mat = self.projection * self.view;
+        self.update()
+    }
+
+    fn update(&mut self) {
+        self.static_projection_view_mat = self.projection * self.view_dir;
+        self.view_projection_mat = self.static_projection_view_mat * self.view_pos;
     }
 }

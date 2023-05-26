@@ -7,7 +7,7 @@ use atlas::{
         shape_renderer::ShapeRendererSystem,
     },
     entity_manager::{ComponentIterator, EntityManager},
-    event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender, EventSenderTrait},
+    event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},

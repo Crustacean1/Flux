@@ -4,7 +4,7 @@ use glad_gl::gl;
 
 use crate::graphics::{
     material::TextureMaterial,
-    mesh::Mesh,
+    mesh::Primitive,
     shaders::{ShaderProgram, UiShader},
     vertices::base_vertices::{TriangleIndex, Vertex2PT},
 };
@@ -12,14 +12,14 @@ use crate::graphics::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct ShapeRenderer {
-    mesh: Mesh<Vertex2PT, TriangleIndex>,
+    mesh: Primitive<Vertex2PT, TriangleIndex>,
     material: TextureMaterial,
 }
 
 impl ShapeRenderer {
     pub fn quad((width, height): (f32, f32), material: TextureMaterial) -> ShapeRenderer {
         ShapeRenderer {
-            mesh: Mesh::gen_quad(width, height),
+            mesh: Primitive::gen_quad(width, height),
             material,
         }
     }
@@ -35,17 +35,15 @@ impl ShapeRendererSystem {
     }
 }
 
-pub type ShapeAndTransform<'a> = (&'a Transform, &'a ShapeRenderer);
-
 impl ShapeRendererSystem {
-    pub fn render<'a>(
+    pub fn render(
         &self,
-        shapes: &[(usize, *const Transform, *const ShapeRenderer)],
+        shapes: &[((usize, *const Transform), *const ShapeRenderer)],
         camera: &Camera,
     ) {
         unsafe {
-            let vp = camera.pv_mat();
-            shapes.iter().for_each(|(_, transform, shape)| {
+            let vp = camera.projection_view_mat();
+            shapes.iter().for_each(|((_, transform), shape)| {
                 let transform = &**transform;
                 let shape = &**shape;
 

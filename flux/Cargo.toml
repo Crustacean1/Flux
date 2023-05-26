@@ -10,3 +10,4 @@ atlas = { path = "../atlas" }
 macros = { path = "../macros" }
 glad-gl = {path="../glad-gl"}
 glam = "0.24.0"
+rand = "0.8.5"

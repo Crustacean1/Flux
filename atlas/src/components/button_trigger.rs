@@ -56,7 +56,7 @@ impl ButtonTriggerSystem {
 
     pub fn check_buttons<'a>(
         &self,
-        buttons: &[(usize, *const ButtonTrigger, *const dyn ButtonHandler)],
+        buttons: &[((usize, *const ButtonTrigger), *const dyn ButtonHandler)],
         event_reader: &EventReader,
         event_sender: &mut EventSender,
     ) {
@@ -68,15 +68,15 @@ impl ButtonTriggerSystem {
     }
 
     pub fn check_buttons_for_event<'a>(
-        buttons: &[(usize, *const ButtonTrigger, *const dyn ButtonHandler)],
+        buttons: &[((usize, *const ButtonTrigger), *const dyn ButtonHandler)],
         (x, y): (f32, f32),
         event_sender: &mut EventSender,
     ) {
         unsafe {
-            if let Some((_, _, handler)) = buttons
+            if let Some((_, handler)) = buttons
                 .iter()
-                .filter(|(_, trigger, _)| (**trigger).intersects(x, y))
-                .max_by_key(|(_, trigger, _)| (**trigger).level)
+                .filter(|((_, trigger), _)| (**trigger).intersects(x, y))
+                .max_by_key(|((_, trigger), _)| (**trigger).level)
             {
                 (**handler).on_click(event_sender);
             }

@@ -3,6 +3,8 @@ use std::mem::size_of;
 use super::{Index, PrimitiveType, Shapely, Vertex};
 use macros::Vertex;
 
+const PI: f32 = 3.1415926535;
+
 #[derive(Vertex, Debug)]
 #[repr(C)]
 pub struct Vertex2P {
@@ -12,15 +14,15 @@ pub struct Vertex2P {
 #[derive(Vertex, Debug)]
 #[repr(C)]
 pub struct Vertex2PT {
-    pos: [f32; 2],
-    tex: [f32; 2],
+    pub pos: [f32; 2],
+    pub tex: [f32; 2],
 }
 
 #[derive(Vertex, Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Vertex3PT {
-    pos: [f32; 3],
-    tex: [f32; 2],
+    pub pos: [f32; 3],
+    pub tex: [f32; 2],
 }
 
 impl Shapely for Vertex3PT {
@@ -37,16 +39,16 @@ impl Shapely for Vertex3PT {
                     ],
                     tex: match j {
                         0 => [
-                            if ((i >> 0) & 1) == 1 { 1.0 } else { 0.0 },
-                            if ((i >> 1) & 1) == 1 { 1.0 } else { 0.0 },
+                            if ((i >> 0) & 1) == 0 { 1.0 } else { 0.0 },
+                            if ((i >> 1) & 1) == 0 { 1.0 } else { 0.0 },
                         ],
                         1 => [
+                            if ((i >> 2) & 1) == 0 { 1.0 } else { 0.0 },
                             if ((i >> 0) & 1) == 0 { 1.0 } else { 0.0 },
-                            if ((i >> 2) & 1) == 1 { 1.0 } else { 0.0 },
                         ],
                         2 => [
-                            if ((i >> 1) & 1) == 1 { 1.0 } else { 0.0 },
-                            if ((i >> 2) & 1) == 1 { 1.0 } else { 0.0 },
+                            if ((i >> 2) & 1) == 0 { 1.0 } else { 0.0 },
+                            if ((i >> 1) & 1) == 0 { 1.0 } else { 0.0 },
                         ],
                         _ => {
                             panic!()
@@ -58,7 +60,29 @@ impl Shapely for Vertex3PT {
             .collect()
     }
 
-    fn gen_quad(width: f32, height: f32) -> Vec<Self::Attribute> {
+    fn sphere(radius: f32, detail: u32) -> Vec<Self::Attribute> {
+        (0..detail)
+            .map(|i| {
+                (0..detail).map(move |j| {
+                    let (x_angle, y_angle) = (
+                        2.0 * PI * i as f32 / (detail - 1) as f32,
+                        PI * j as f32 / (detail - 1) as f32 - PI * 0.5,
+                    );
+                    Vertex3PT {
+                        pos: [
+                            radius * y_angle.cos() * x_angle.cos(),
+                            radius * y_angle.sin(),
+                            radius * y_angle.cos() * x_angle.sin(),
+                        ],
+                        tex: [i as f32 / detail as f32, j as f32 / detail as f32],
+                    }
+                })
+            })
+            .flatten()
+            .collect()
+    }
+
+    fn gen_quad(_: f32, _: f32) -> Vec<Self::Attribute> {
         todo!()
     }
 }
@@ -84,6 +108,10 @@ impl Shapely for Vertex2P {
     }
 
     fn skybox(side: f32) -> Vec<Self::Attribute> {
+        todo!()
+    }
+
+    fn sphere(radius: f32, detail: u32) -> Vec<Self::Attribute> {
         todo!()
     }
 }
@@ -114,12 +142,16 @@ impl Shapely for Vertex2PT {
     fn skybox(side: f32) -> Vec<Self::Attribute> {
         todo!()
     }
+
+    fn sphere(radius: f32, detail: u32) -> Vec<Self::Attribute> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct TriangleIndex {
-    triangle: [u32; 3],
+    pub triangle: [u32; 3],
 }
 
 impl Index for TriangleIndex {
@@ -194,5 +226,33 @@ impl Shapely for TriangleIndex {
             },
             /*************************/
         ]
+    }
+
+    fn sphere(_: f32, detail: u32) -> Vec<Self::Attribute> {
+        (0..(detail - 1))
+            .map(|i| {
+                (0..(detail - 1))
+                    .map(move |j| {
+                        [
+                            TriangleIndex {
+                                triangle: [
+                                    i * detail + j,
+                                    i * detail + j + 1,
+                                    (i + 1) * detail + j,
+                                ],
+                            },
+                            TriangleIndex {
+                                triangle: [
+                                    (i + 1) * detail + j,
+                                    (i + 1) * detail + j + 1,
+                                    i * detail + j + 1,
+                                ],
+                            },
+                        ]
+                    })
+                    .flatten()
+            })
+            .flatten()
+            .collect()
     }
 }

@@ -1,4 +1,5 @@
 pub mod indexer;
+pub mod mesh;
 pub mod resource;
 pub mod root_resource_manager;
 pub mod scene_resource_manager;
@@ -37,3 +38,4 @@ pub trait Resourcefull<T> {
 pub trait ResourceManager<T: Clone> {
     fn get(&mut self, res_id: &str) -> Result<Resource<T>, GameError>;
 }
+

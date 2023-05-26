@@ -1,8 +1,6 @@
 use atlas::{
     game_root::{GameError, GameRoot},
-    graphics::graphics_context::GraphicsContext,
     resource_manager::root_resource_manager::{RootResourceManager, SceneInitializer},
-    scene::Scene,
 };
 use scene::{first_scene::FirstScene, main_menu_scene::MainMenuScene};
 

@@ -8,8 +8,9 @@ use glad_gl::gl;
 
 use super::vertices::{Index, Shapely, Vertex};
 
+
 #[derive(Clone, Copy)]
-pub struct Mesh<
+pub struct Primitive<
     VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
     IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
 > {
@@ -24,7 +25,7 @@ pub struct Mesh<
 impl<
         VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
         IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
-    > Mesh<VertexType, IndexType>
+    > Primitive<VertexType, IndexType>
 {
     pub fn new(vertices: &[VertexType], indices: &[IndexType]) -> Self {
         let (vao, vbo, ebo) = Self::create_buffers();
@@ -100,7 +101,7 @@ impl<
 impl<
         VertexType: Vertex + Shapely<Attribute = VertexType> + fmt::Debug,
         IndexType: Index + Shapely<Attribute = IndexType> + fmt::Debug,
-    > Mesh<VertexType, IndexType>
+    > Primitive<VertexType, IndexType>
 {
     pub fn gen_quad(width: f32, height: f32) -> Self {
         let vertices = VertexType::gen_quad(width, height);
@@ -111,6 +112,12 @@ impl<
     pub fn skybox(side: f32) -> Self {
         let vertices = VertexType::skybox(side);
         let indices = IndexType::skybox(side);
+        Self::new(&vertices, &indices)
+    }
+
+    pub fn sphere(radius: f32, detail: u32) -> Self {
+        let vertices = VertexType::sphere(radius, detail);
+        let indices = IndexType::sphere(radius, detail);
         Self::new(&vertices, &indices)
     }
 }

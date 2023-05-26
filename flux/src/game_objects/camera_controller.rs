@@ -16,7 +16,7 @@ impl UserCameraController {
         UserCameraController {
             prev: (0.0, 0.0),
             angles: (0.0, 0.0),
-            speed: 0.005,
+            speed: 0.002,
             forward: Vec3::new(0.0, 0.0, 1.0),
             up: Vec3::new(0.0, 1.0, 0.0),
             right: Vec3::new(1.0, 0.0, 0.0),

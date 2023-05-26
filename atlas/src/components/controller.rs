@@ -24,7 +24,7 @@ impl CameraControllerSystem {
     pub fn read_inputs(
         &self,
         event_reader: &EventReader,
-        controller_pairs: &[(usize, *const dyn Controller, *mut Camera)],
+        controller_pairs: &[((usize, *const dyn Controller), *mut Camera)],
     ) {
         event_reader
             .read()
@@ -65,10 +65,13 @@ impl CameraControllerSystem {
             });
     }
 
-    fn handle_pan(pan: (f32, f32), controller_pairs: &[(usize, *mut dyn Controller, *mut Camera)]) {
+    fn handle_pan(
+        pan: (f32, f32),
+        controller_pairs: &[((usize, *mut dyn Controller), *mut Camera)],
+    ) {
         controller_pairs
             .iter()
-            .for_each(|(_, controller, camera)| unsafe {
+            .for_each(|((_, controller), camera)| unsafe {
                 let camera = &mut **camera;
                 let controller = &mut **controller;
                 controller.look(pan, camera)
@@ -77,11 +80,11 @@ impl CameraControllerSystem {
 
     fn handle_movement(
         movement: Vec3,
-        controller_pairs: &[(usize, *mut dyn Controller, *mut Camera)],
+        controller_pairs: &[((usize, *mut dyn Controller), *mut Camera)],
     ) {
         controller_pairs
             .iter()
-            .for_each(|(_, controller, camera)| unsafe {
+            .for_each(|((_, controller), camera)| unsafe {
                 let camera = &mut **camera;
                 let controller = &mut **controller;
                 controller.translate(movement, camera);

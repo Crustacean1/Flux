@@ -24,6 +24,7 @@ pub trait Shapely {
     type Attribute;
     fn gen_quad(width: f32, height: f32) -> Vec<Self::Attribute>;
     fn skybox(side: f32) -> Vec<Self::Attribute>;
+    fn sphere(radius: f32, detail: u32) -> Vec<Self::Attribute>;
 }
 
 pub trait Vertex {

@@ -53,7 +53,7 @@ impl GraphicsContext {
                 None => Err(GameError::new("Failed to create window")),
             }?;
 
-        /*glfw.with_primary_monitor(|_glfw, monitor| match monitor {
+        glfw.with_primary_monitor(|_glfw, monitor| match monitor {
             Some(monitor) => {
                 if let Some(video_mode) = monitor.get_video_mode() {
                     window.set_monitor(
@@ -70,7 +70,7 @@ impl GraphicsContext {
                 }
             }
             None => Err(GameError::new("Failed to get monitor")),
-        })?;*/
+        })?;
 
         window.make_current();
 

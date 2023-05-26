@@ -101,7 +101,7 @@ impl RootResourceManager {
                     .log_info(&format!("Loading shader: {}", shader_name));
                 shaders.insert(
                     shader_name.clone(),
-                    Resource::new(&shader_name, ShaderProgram::load(&shader_source)?),
+                    Resource::new(shader_name.clone(), ShaderProgram::load(&shader_source)?),
                 );
                 Ok(shaders)
             },

@@ -1,9 +1,9 @@
 use glam::{Mat4, Vec3, Vec4};
 
 pub struct Transform {
-    position: Vec3,
-    scale: Vec3,
-    rotation: Vec3,
+    pub position: Vec3,
+    pub scale: Vec3,
+    pub rotation: Vec3,
 }
 
 impl Transform {
@@ -24,7 +24,7 @@ impl Transform {
     }
 
     pub fn model(&self) -> Mat4 {
-        Self::scale(self.scale) * Self::translation(self.position) * Self::rotation(self.rotation)
+        Self::translation(self.position) * Self::scale(self.scale) * Self::rotation(self.rotation)
     }
 
     fn scale(scale: Vec3) -> Mat4 {

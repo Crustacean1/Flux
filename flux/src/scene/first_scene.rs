@@ -2,15 +2,15 @@ use atlas::{
     components::{
         camera::{Camera, Frustrum},
         controller::{CameraControllerSystem, Controller},
-        skybox_renderer::{SkyboxRenderer, SkyboxSystem},
+        mesh_renderer::MeshRendererSystem,
+        skybox_renderer::SkyboxSystem,
     },
     entity_manager::{ComponentIterator, EntityManager, EntityManagerTrait},
     event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
     graphics::{
-        graphics_context::{self, ContextEvent, GraphicsContext},
-        mesh::Mesh,
-        vertices::base_vertices::{TriangleIndex, Vertex3PT},
+        graphics_context::{ContextEvent, GraphicsContext},
+        shaders::{ShaderProgram, SkyboxShader},
     },
     resource_manager::{
         root_resource_manager::RootResourceManager, scene_resource_manager::SceneResourceManager,
@@ -20,11 +20,14 @@ use atlas::{
 };
 use glam::Vec3;
 
-use crate::game_objects::camera_controller::UserCameraController;
+use crate::game_objects::{
+    asteroids::asteroids, camera_controller::UserCameraController, skybox::skybox,
+};
 
 pub struct FirstScene {
     cam_id: usize,
     skybox_system: SkyboxSystem,
+    mesh_system: MeshRendererSystem,
     camera_controller_system: CameraControllerSystem,
     entity_manager: EntityManager,
     event_reader: EventReader,
@@ -61,27 +64,13 @@ impl FirstScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build()?;
 
-        let (skybox_system, camera_controller_system, event_sender, event_reader) =
+        let (skybox_system, mesh_system, camera_controller_system, event_sender, event_reader) =
             Self::create_systems(root_resource_manager)?;
 
-        let space_box_textures = [
-            "bkg1_top",
-            "bkg1_left",
-            "bkg1_front",
-            "bkg1_right",
-            "bkg1_back",
-            "bkg1_bot",
-        ];
-
-        let space_box_textures: Vec<_> = space_box_textures
-            .iter()
-            .map(|texture| resource_manager.get(texture).expect("").res)
-            .collect();
-
-        let space_box = SkyboxRenderer::new(10.0, &space_box_textures);
-        entity_manager.add_entity(space_box);
-
         let (width, height) = graphics_context.dimensions();
+
+        skybox(&mut entity_manager, &mut resource_manager);
+        asteroids(&mut entity_manager, &mut resource_manager)?;
 
         let camera = Camera::new_persp(
             Frustrum::centered_frustrum(width as f32, height as f32, 0.1, 100.0),
@@ -89,16 +78,15 @@ impl FirstScene {
             Vec3::new(0.0, 0.0, -1.0),
         );
 
-        let cam_id = entity_manager.add_entity((
-            Box::new(UserCameraController::new()) as Box<dyn Controller>,
-            camera,
-        ));
+        let camera_controller = Box::new(UserCameraController::new()) as Box<dyn Controller>;
+        let cam_id = entity_manager.add_entity((camera_controller, camera));
 
         graphics_context.cursor_lock(true);
 
         Ok(Box::new(FirstScene {
             camera_controller_system,
             skybox_system,
+            mesh_system,
             event_reader,
             event_sender,
             entity_manager,
@@ -128,18 +116,23 @@ impl FirstScene {
     ) -> Result<
         (
             SkyboxSystem,
+            MeshRendererSystem,
             CameraControllerSystem,
             EventSender,
             EventReader,
         ),
         GameError,
     > {
-        let skybox_system = SkyboxSystem::new(root_resource_manager.get("basic_skybox")?.res);
+        let skybox: ShaderProgram<SkyboxShader> = root_resource_manager.get("basic_skybox")?.res;
+        let skybox_system = SkyboxSystem::new(skybox.clone());
+        let mesh_system = MeshRendererSystem::new(skybox);
+
         let camera_controller_system = CameraControllerSystem::new();
         let event_sender = EventSender::new();
         let event_reader = EventReader::new();
         Ok((
             skybox_system,
+            mesh_system,
             camera_controller_system,
             event_sender,
             event_reader,
@@ -150,6 +143,7 @@ impl FirstScene {
         if let Some(camera) = self.entity_manager.get_camera(self.cam_id) {
             self.skybox_system
                 .render(camera, self.entity_manager.iter());
+            self.mesh_system.render(camera, self.entity_manager.iter());
         }
     }
 }

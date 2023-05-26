@@ -4,7 +4,7 @@ use glad_gl::gl;
 
 use crate::graphics::{
     material::TextureMaterial,
-    mesh::Mesh,
+    mesh::Primitive,
     shaders::{ShaderProgram, SkyboxShader},
     vertices::base_vertices::{TriangleIndex, Vertex3PT},
 };
@@ -13,7 +13,7 @@ use super::camera::Camera;
 
 pub struct SkyboxRenderer {
     textures: [TextureMaterial; 6],
-    mesh: Mesh<Vertex3PT, TriangleIndex>,
+    mesh: Primitive<Vertex3PT, TriangleIndex>,
 }
 
 pub struct SkyboxSystem {
@@ -22,7 +22,7 @@ pub struct SkyboxSystem {
 
 impl SkyboxRenderer {
     pub fn new(size: f32, textures: &[TextureMaterial]) -> Self {
-        let mesh = Mesh::skybox(size);
+        let mesh = Primitive::skybox(size);
         SkyboxRenderer {
             mesh,
             textures: [
@@ -45,7 +45,7 @@ impl SkyboxSystem {
 
                 skybox.mesh.bind();
                 skybox.textures.iter().enumerate().for_each(|(i, texture)| {
-                    let pv = camera.pv_mat();
+                    let pv = camera.static_projection_view_mat();
                     self.shader.load_mvp(&pv.to_cols_array());
                     texture.bind();
                     self.shader.bind_material(texture);

@@ -1,6 +1,6 @@
 use crate::components::{camera::Camera, controller::Controller};
 
-use super::{EntityManager, EntityManagerTrait};
+use super::{ComponentIterator, EntityManager, EntityManagerTrait};
 
 impl EntityManagerTrait<(Box<dyn Controller>, Camera)> for EntityManager {
     fn add_entity(&mut self, (controller, camera): (Box<dyn Controller>, Camera)) -> usize {
@@ -12,11 +12,7 @@ impl EntityManagerTrait<(Box<dyn Controller>, Camera)> for EntityManager {
         self.cameras.1.push(controller);
         self.cameras.2.push(camera);
 
-        self.camera_controller_iter.push((
-            entity_id,
-            self.cameras.1[entity_ref].as_mut(),
-            &mut self.cameras.2[entity_ref],
-        ));
+        ComponentIterator::<((usize, *const (dyn Controller)), *mut Camera)>::reload(self);
 
         entity_id
     }

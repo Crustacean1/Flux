@@ -3,7 +3,7 @@ use crate::components::{
     transform::Transform,
 };
 
-use super::{EntityManager, EntityManagerTrait};
+use super::{ComponentIterator, EntityManager, EntityManagerTrait};
 
 impl
     EntityManagerTrait<(
@@ -23,7 +23,6 @@ impl
         ),
     ) -> usize {
         let entity_id = self.next_entity_id;
-        let entity_ref = self.menu_buttons.0.len();
         self.next_entity_id += 1;
 
         self.menu_buttons.0.push(entity_id);
@@ -32,38 +31,15 @@ impl
         self.menu_buttons.3.push(trigger);
         self.menu_buttons.4.push(handler);
 
-        self.transform_shape_iter.push((
-            entity_id,
-            &self.menu_buttons.1[entity_ref],
-            &self.menu_buttons.2[entity_ref],
-        ));
-
-        self.trigger_handler_iter.push((
-            entity_id,
-            &self.menu_buttons.3[entity_ref],
-            self.menu_buttons.4[entity_ref].as_ref(),
-        ));
+        ComponentIterator::<((usize, *const Transform), *const ShapeRenderer)>::reload(self);
+        ComponentIterator::<((usize, *const ButtonTrigger), *const dyn ButtonHandler)>::reload(
+            self,
+        );
 
         entity_id
     }
 
     fn remove_entity(&mut self, entity: usize) {
-        if let Some(index) = self
-            .transform_shape_iter
-            .iter()
-            .position(|(entity_id, ..)| *entity_id == entity)
-        {
-            self.transform_shape_iter.remove(entity);
-        }
-
-        if let Some(index) = self
-            .trigger_handler_iter
-            .iter()
-            .position(|(entity_id, ..)| *entity_id == entity)
-        {
-            self.trigger_handler_iter.remove(entity);
-        }
-
         if let Some(index) = self
             .menu_buttons
             .0
@@ -75,6 +51,11 @@ impl
             self.menu_buttons.2.remove(index);
             self.menu_buttons.3.remove(index);
             self.menu_buttons.4.remove(index);
+
+            ComponentIterator::<((usize, *const Transform), *const ShapeRenderer)>::reload(self);
+            ComponentIterator::<((usize, *const ButtonTrigger), *const dyn ButtonHandler)>::reload(
+                self,
+            );
         }
     }
 }

@@ -41,7 +41,6 @@ pub fn vertex_derive(stream: TokenStream) -> TokenStream {
         .enumerate()
         .map(|(i, (len, offset))| {
             quote! {
-                println!("Defining vertex attribute: {} {} {} {}", #i, #len, #stride, #offset);
                 glad_gl::gl::VertexAttribPointer(#i as u32,
                     #len as i32,
                     glad_gl::gl::FLOAT,

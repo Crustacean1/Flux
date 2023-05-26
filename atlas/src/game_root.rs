@@ -57,7 +57,7 @@ impl GameRoot {
     }
 
     pub fn run(&mut self) {
-        let mut next_scene = String::from("first_scene");
+        let mut next_scene = String::from("main");
         loop {
             let mut scene: Box<dyn Scene> = match self
                 .root_resource_manager
