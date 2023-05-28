@@ -3,17 +3,16 @@ use std::{ffi::c_void, mem::size_of, ptr};
 use glad_gl::gl;
 
 use crate::graphics::{
-    material::TextureMaterial,
-    mesh::Primitive,
+    material::{Material, TextureMaterial},
+    primitive::Primitive,
     shaders::{ShaderProgram, SkyboxShader},
-    vertices::base_vertices::{TriangleIndex, Vertex3PT},
 };
 
 use super::camera::Camera;
 
 pub struct SkyboxRenderer {
     textures: [TextureMaterial; 6],
-    mesh: Primitive<Vertex3PT, TriangleIndex>,
+    mesh: Primitive,
 }
 
 pub struct SkyboxSystem {
@@ -40,15 +39,14 @@ impl SkyboxRenderer {
 impl SkyboxSystem {
     pub fn render<'a>(&self, camera: &Camera, skyboxes: &[(usize, *const SkyboxRenderer)]) {
         unsafe {
-            skyboxes.iter().take(1).for_each(|(_, skybox)| {
+            /*skyboxes.iter().take(1).for_each(|(_, skybox)| {
                 let skybox = &**skybox;
 
                 skybox.mesh.bind();
                 skybox.textures.iter().enumerate().for_each(|(i, texture)| {
                     let pv = camera.static_projection_view_mat();
                     self.shader.load_mvp(&pv.to_cols_array());
-                    texture.bind();
-                    self.shader.bind_material(texture);
+                    texture.bind(&self.shader);
                     gl::DrawElements(
                         skybox.mesh.primitive_type(),
                         6,
@@ -56,7 +54,7 @@ impl SkyboxSystem {
                         (i * 6 * size_of::<u32>()) as *const c_void,
                     );
                 });
-            });
+            });*/
         }
     }
 

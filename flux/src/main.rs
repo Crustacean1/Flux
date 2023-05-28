@@ -1,6 +1,6 @@
 use atlas::{
     game_root::{GameError, GameRoot},
-    resource_manager::root_resource_manager::{RootResourceManager, SceneInitializer},
+    resource_manager::scene_manager::{SceneInitializer, SceneManager},
 };
 use scene::{first_scene::FirstScene, main_menu_scene::MainMenuScene};
 
@@ -18,13 +18,13 @@ fn main() {
 
 fn start_game() -> Result<(), GameError> {
     let mut game_root = GameRoot::new("Flux")?;
-    let root_resource_manager = game_root.resource_manager_mut();
-    load_scenes(root_resource_manager)?;
+    let scene_manager = game_root.scene_manager();
+    load_scenes(scene_manager)?;
     game_root.run();
     Ok(())
 }
 
-fn load_scenes(root_resource_manager: &mut RootResourceManager) -> Result<(), GameError> {
+fn load_scenes(root_resource_manager: &mut SceneManager) -> Result<(), GameError> {
     let scenes: [(_, SceneInitializer); 2] = [
         ("main", MainMenuScene::new),
         ("first_scene", FirstScene::new),

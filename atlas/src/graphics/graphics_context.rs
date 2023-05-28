@@ -83,8 +83,10 @@ impl GraphicsContext {
         gl::load(|e| glfw.get_proc_address_raw(e) as *const std::os::raw::c_void);
 
         unsafe {
-            gl::ClearColor(0.2, 0.2, 0.2, 1.0);
+            gl::ClearColor(0., 0., 0., 1.0);
+            gl::PointSize(10.0);
             gl::Enable(gl::DEPTH_TEST);
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
         }
 
         let tracked_keys = vec![];

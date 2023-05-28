@@ -1,17 +1,17 @@
-use std::{collections::HashMap, env, path::PathBuf};
-
-use crate::{
-    game_root::GameError,
-    graphics::{
-        material::TextureMaterial,
-        mesh::Primitive,
-        vertices::base_vertices::{TriangleIndex, Vertex3PT},
-    },
+use std::{
+    any::{self, Any},
+    collections::HashMap,
+    env,
+    path::PathBuf,
 };
 
+use freetype::Library;
+
+use crate::game_root::GameError;
+
 use super::{
-    indexer::index_resources, mesh::collect_mesh, resource::Resource, texture::collect_textures,
-    ResourceManager,
+    font::load_font, indexer::index_resources, mesh::load_mesh, resource::Resource,
+    shader::load_shader, texture::load_mat, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -19,59 +19,123 @@ pub enum LazyResource<T> {
     Loaded(T),
 }
 
+trait ResourceCollectionTrait<T: Default + Clone> {
+    fn get(&mut self, res_id: &str) -> Resource<T>;
+    fn add(&mut self, res_id: &str, resource: &T);
+}
+
+struct ResourceCollection<T> {
+    resources: HashMap<String, T>,
+}
+
+impl<T: Default + Clone> ResourceCollection<T> {
+    pub fn new(res_id: &str, resource: &T) -> Self {
+        let mut res_col = ResourceCollection {
+            resources: HashMap::new(),
+        };
+        res_col.add(res_id, resource);
+        res_col
+    }
+}
+
+impl<T: Default + Clone> ResourceCollectionTrait<T> for ResourceCollection<T> {
+    fn get(&mut self, res_id: &str) -> Resource<T> {
+        match self.resources.get(res_id) {
+            Some(resource) => Resource::new(res_id, resource),
+            _ => {
+                println!("Resource: '{}' not found, using default", res_id);
+                Resource::new("<MISSING>", &T::default())
+            }
+        }
+    }
+
+    fn add(&mut self, res_id: &str, resource: &T) {
+        self.resources
+            .insert(String::from(res_id), resource.clone());
+    }
+}
+
 pub struct SceneResourceManager {
-    textures: HashMap<String, LazyResource<Resource<TextureMaterial>>>,
-    meshes: HashMap<String, Resource<Primitive<Vertex3PT, TriangleIndex>>>,
+    resources: Vec<Box<dyn Any>>,
 }
 
 impl SceneResourceManager {
-    pub fn build() -> Result<Self, GameError> {
-        let resource_groups = index_resources(&Self::root_path()?)?;
-        let textures = collect_textures(&resource_groups);
-        let meshes = collect_mesh(&resource_groups);
+    pub fn build(root: &str) -> Result<Self, GameError> {
+        let resource_index = index_resources(&Self::root_path(root)?);
 
-        Ok(SceneResourceManager { textures, meshes })
+        let resources = Vec::new();
+        let mut freetype_lib = Library::init().unwrap();
+        let mut res_man = SceneResourceManager { resources };
+
+        resource_index.iter().for_each(|(res_id, ext, dir)| {
+            load_font(res_id, ext, dir, &mut freetype_lib, &mut res_man)
+        });
+
+        resource_index
+            .iter()
+            .for_each(|(res_id, ext, dir)| load_shader(res_id, ext, dir, &mut res_man));
+
+        resource_index
+            .iter()
+            .for_each(|(res_id, ext, dir)| load_mat(res_id, ext, dir, &mut res_man));
+
+        resource_index
+            .iter()
+            .filter(|(_, ext, _)| ext == "mesh")
+            .for_each(|(res_id, _, dir)| load_mesh(res_id, dir, &mut res_man));
+
+        Ok(res_man)
     }
 
-    fn root_path() -> Result<PathBuf, GameError> {
-        let mut game_dir = env::current_exe()?;
-        game_dir.pop();
-        game_dir.pop();
-        game_dir.pop();
-        game_dir.push("flux");
-        game_dir.push("assets");
-        Ok(game_dir)
-    }
-}
-
-impl ResourceManager<TextureMaterial> for SceneResourceManager {
-    fn get(&mut self, res_id: &str) -> Result<Resource<TextureMaterial>, GameError> {
-        if let Some(lazy_material) = self.textures.get_mut(res_id) {
-            match lazy_material {
-                LazyResource::Loaded(material) => Ok(material.clone()),
-                LazyResource::Unloaded(filepath) => {
-                    let new_material = TextureMaterial::from_file(filepath)?;
-                    let new_material_resource = Resource::new(
-                        String::from(filepath.file_stem().unwrap().to_str().unwrap()),
-                        new_material,
-                    );
-
-                    *lazy_material = LazyResource::Loaded(new_material_resource.clone());
-                    Ok(new_material_resource)
-                }
-            }
+    fn root_path(root: &str) -> Result<PathBuf, GameError> {
+        if let Ok(mut game_dir) = env::current_exe() {
+            game_dir.pop();
+            game_dir.pop();
+            game_dir.pop();
+            game_dir.push("flux");
+            game_dir.push("assets");
+            game_dir.push(root);
+            Ok(game_dir)
         } else {
-            Err(GameError::new(&format!("No material with id: {}", res_id)))
+            Err(GameError::new("Failed to read asset path"))
         }
     }
 }
 
-impl ResourceManager<Primitive<Vertex3PT, TriangleIndex>> for SceneResourceManager {
-    fn get(
-        &mut self,
-        res_id: &str,
-    ) -> Result<Resource<Primitive<Vertex3PT, TriangleIndex>>, GameError> {
-        let Some(a) = self.meshes.get(res_id) else {return Err(GameError::new("No mesh with id: {}"))};
-        Ok(a.clone())
+impl<T: Default + Clone + 'static> ResourceManager<T> for SceneResourceManager {
+    fn get(&mut self, res_id: &str) -> Resource<T> {
+        self.resources
+            .iter_mut()
+            .find_map(|resources| {
+                if let Some(resources) = resources.downcast_mut::<ResourceCollection<T>>() {
+                    Some(resources.get(res_id))
+                } else {
+                    None
+                }
+            })
+            .expect(&format!(
+                "Resource type not found: '{}'",
+                any::type_name::<T>()
+            ))
+    }
+
+    fn register(&mut self, res_id: &str, resource: T) {
+        if self
+            .resources
+            .iter_mut()
+            .find_map(
+                |resources| match resources.downcast_mut::<ResourceCollection<T>>() {
+                    Some(resources) => {
+                        resources.add(&res_id, &resource);
+                        Some(())
+                    }
+                    _ => None,
+                },
+            )
+            .is_none()
+        {
+            let collection = Box::new(ResourceCollection::<T>::new(res_id, &resource));
+            self.resources.push(collection);
+        }
     }
 }

@@ -6,7 +6,7 @@ use atlas::{
     entity_manager::{EntityManager, EntityManagerTrait},
     event_bus::EventSenderTrait,
     game_root::GameError,
-    graphics::material::TextureMaterial,
+    graphics::material::{TextureMaterial, UiMaterial},
     resource_manager::{
         resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager,
     },
@@ -28,27 +28,22 @@ pub fn create_main_menu(
     buttons
         .iter_mut()
         .enumerate()
-        .for_each(
-            |(index, button_name)| match resource_manager.get(button_name) {
-                Ok(material) => add_menu_entry(
-                    Vec3::new(center.0, center.1 + index as f32 * button_gap, 1.0),
-                    component_manager,
-                    &material,
-                ),
-                Err(e) => {
-                    println!("Failed to load: '{}':\n{}", button_name, e);
-                }
-            },
-        );
+        .for_each(|(index, button_name)| {
+            let material = resource_manager.get(button_name);
+            add_menu_entry(
+                Vec3::new(center.0, center.1 + index as f32 * button_gap, 1.0),
+                component_manager,
+                &material,
+            );
+        });
 
-    if let Ok(main_screen) = resource_manager.get("main_menu") {
-        component_manager.add_entity((
-            Transform::pos(Vec3::new(width as f32 * 0.5, height as f32 * 0.5, 0.0)),
-            ShapeRenderer::quad((width as f32 * 0.5, height as f32 * 0.5), main_screen.res),
-            ButtonTrigger::new(0, (0.0, 0.0), (width as f32, height as f32)),
-            Box::new(BackgroundHandler::new()) as Box<dyn ButtonHandler>,
-        ));
-    }
+    let main_screen = resource_manager.get("main_menu");
+    component_manager.add_entity((
+        Transform::pos(Vec3::new(width as f32 * 0.5, height as f32 * 0.5, 0.0)),
+        ShapeRenderer::quad((width as f32 * 0.5, height as f32 * 0.5), main_screen.res),
+        ButtonTrigger::new(0, (0.0, 0.0), (width as f32, height as f32)),
+        Box::new(BackgroundHandler::new()) as Box<dyn ButtonHandler>,
+    ));
 
     Ok(())
 }
@@ -84,7 +79,7 @@ impl ButtonHandler for BackgroundHandler {
 fn add_menu_entry(
     pos: Vec3,
     component_manager: &mut EntityManager,
-    material: &Resource<TextureMaterial>,
+    material: &Resource<UiMaterial>,
 ) {
     component_manager.add_entity((
         Transform::pos(pos),

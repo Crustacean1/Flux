@@ -1,37 +1,33 @@
 use atlas::{
-    components::{mesh_renderer::MeshRenderer, transform::Transform},
-    entity_manager::{ComponentIterator, EntityManager, EntityManagerTrait},
+    components::transform::Transform,
+    entity_manager::{EntityManager, EntityManagerTrait},
     game_root::GameError,
     graphics::{
+        lights::{Light, LightColor},
         material::TextureMaterial,
-        mesh::Primitive,
-        vertices::base_vertices::{TriangleIndex, Vertex3PT},
+        mesh::Mesh,
+        shaders::MeshShader,
     },
-    resource_manager::{
-        resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager,
-    },
+    resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
 };
 use glam::Vec3;
-use rand::Rng;
 
 pub fn asteroids(
     entity_manager: &mut EntityManager,
     resource_manager: &mut SceneResourceManager,
 ) -> Result<(), GameError> {
-    let asteroid_tex: Resource<TextureMaterial> = resource_manager.get("asteroid1")?;
+    let meshes = ["spaceship3", "spaceship2", "spaceship1", "impostor"];
 
-    let meshes: [&str; 0] = [];
-
-    let meshes: Vec<_> = meshes
+    let meshes: Vec<Mesh<MeshShader, TextureMaterial>> = meshes
         .iter()
-        .map(|mesh| -> Primitive<Vertex3PT, TriangleIndex> {
-            return resource_manager.get(mesh).unwrap().res;
+        .map(|mesh| {
+            return resource_manager.get(mesh).res;
         })
         .collect();
 
-    meshes.iter().for_each(|mesh| {
-        let position = Vec3::new(0.0, 0.0, 0.0);
-        let scale = Vec3::new(1.0, 1.0, 1.0);
+    meshes.iter().enumerate().for_each(|(i, mesh)| {
+        let position = Vec3::new(0.0, 10.0 * i as f32, 0.0);
+        let scale = Vec3::new(1., 1., 1.);
         let rotation = Vec3::new(0.0, 0.0, 0.0);
 
         entity_manager.add_entity((
@@ -40,12 +36,21 @@ pub fn asteroids(
                 scale,
                 rotation,
             },
-            MeshRenderer {
-                mesh: mesh.clone(),
-                material: asteroid_tex.res.clone(),
-            },
+            mesh.clone(),
         ));
     });
+
+    entity_manager.add_entity((
+        Transform::pos(Vec3::new(0.0, 0.0, 0.0)),
+        Light::DirectionalLight(
+            Vec3::new(0.0, 1.0, 0.0),
+            LightColor {
+                ambient: Vec3::new(0.01, 0.01, 0.01),
+                diffuse: Vec3::new(0.02, 0.02, 0.02),
+                specular: Vec3::new(0.6, 0.6, 0.6),
+            },
+        ),
+    ));
 
     Ok(())
 }

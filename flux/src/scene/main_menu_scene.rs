@@ -6,17 +6,14 @@ use atlas::{
         camera::{Camera, Frustrum},
         shape_renderer::ShapeRendererSystem,
     },
-    entity_manager::{ComponentIterator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
         shaders::{ShaderProgram, UiShader},
     },
-    resource_manager::{
-        root_resource_manager::RootResourceManager, scene_resource_manager::SceneResourceManager,
-        ResourceManager,
-    },
+    resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
 };
 
@@ -45,13 +42,13 @@ impl Scene for MainMenuScene {
             graphics_context.display();
 
             self.button_system.check_buttons(
-                self.entity_manager.iter(),
+                &mut self.entity_manager,
                 &self.event_reader,
                 &mut self.event_sender,
             );
 
             self.shape_rendering_system
-                .render(self.entity_manager.iter(), &self.camera);
+                .render(&mut self.entity_manager, &self.camera);
 
             if let Some(scene_action) = self.get_scene_action() {
                 return scene_action;
@@ -90,15 +87,12 @@ impl MainMenuScene {
             })
     }
 
-    pub fn new(
-        root_resource_manager: &mut RootResourceManager,
-        graphics_context: &mut GraphicsContext,
-    ) -> Result<Box<dyn Scene>, GameError> {
-        let ui_shader: ShaderProgram<UiShader> = root_resource_manager.get("basic_ui")?.res;
-        let shape_rendering_system = ShapeRendererSystem::new(ui_shader);
-
+    pub fn new(graphics_context: &mut GraphicsContext) -> Result<Box<dyn Scene>, GameError> {
         let mut entity_manager = EntityManager::new();
-        let mut resource_manager = SceneResourceManager::build()?;
+        let mut resource_manager = SceneResourceManager::build("main")?;
+
+        let ui_shader: ShaderProgram<UiShader> = resource_manager.get("basic_ui").res;
+        let shape_rendering_system = ShapeRendererSystem::new(ui_shader);
 
         create_main_menu(
             &mut entity_manager,

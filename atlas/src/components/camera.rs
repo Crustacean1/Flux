@@ -75,6 +75,14 @@ impl Camera {
         self.static_projection_view_mat
     }
 
+    pub fn view_mat(&self) -> Mat4 {
+        self.view_dir * self.view_pos
+    }
+
+    pub fn projection_mat(&self) -> Mat4 {
+        self.projection
+    }
+
     fn new() -> Self {
         Camera {
             projection: Mat4::IDENTITY,

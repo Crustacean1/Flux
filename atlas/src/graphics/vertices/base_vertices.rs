@@ -82,14 +82,14 @@ impl Shapely for Vertex3PT {
             .collect()
     }
 
-    fn gen_quad(_: f32, _: f32) -> Vec<Self::Attribute> {
+    fn quad(_: f32, _: f32) -> Vec<Self::Attribute> {
         todo!()
     }
 }
 
 impl Shapely for Vertex2P {
     type Attribute = Vertex2P;
-    fn gen_quad(width: f32, height: f32) -> Vec<Vertex2P> {
+    fn quad(width: f32, height: f32) -> Vec<Vertex2P> {
         let (width, height) = (width * 0.5, height * 0.5);
         vec![
             Vertex2P {
@@ -118,7 +118,7 @@ impl Shapely for Vertex2P {
 
 impl Shapely for Vertex2PT {
     type Attribute = Vertex2PT;
-    fn gen_quad(width: f32, height: f32) -> Vec<Vertex2PT> {
+    fn quad(width: f32, height: f32) -> Vec<Vertex2PT> {
         vec![
             Vertex2PT {
                 pos: [-width, -height],
@@ -173,7 +173,7 @@ impl Index for TriangleIndex {
 impl Shapely for TriangleIndex {
     type Attribute = TriangleIndex;
 
-    fn gen_quad(_width: f32, _height: f32) -> Vec<TriangleIndex> {
+    fn quad(_width: f32, _height: f32) -> Vec<TriangleIndex> {
         vec![
             TriangleIndex {
                 triangle: [0, 1, 2],

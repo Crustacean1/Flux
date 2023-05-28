@@ -11,9 +11,6 @@ impl EntityManagerTrait<SkyboxRenderer> for EntityManager {
         self.skyboxes.0.push(entity_id);
         self.skyboxes.1.push(renderer);
 
-        self.skybox_iter
-            .push((entity_id, &self.skyboxes.1[entity_ref]));
-
         entity_id
     }
 
@@ -27,13 +24,6 @@ impl EntityManagerTrait<SkyboxRenderer> for EntityManager {
             self.skyboxes.0.remove(index);
             self.skyboxes.1.remove(index);
         }
-
-        if let Some(index) = self
-            .skybox_iter
-            .iter()
-            .position(|(entity_id, ..)| *entity_id == entity)
-        {
-            self.skybox_iter.remove(index);
-        }
     }
 }
+

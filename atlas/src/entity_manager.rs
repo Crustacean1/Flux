@@ -1,22 +1,31 @@
 mod controller;
+mod light;
 mod menu_button;
 mod mesh_renderer;
 mod skybox;
 
-use crate::components::{
-    button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
-    controller::Controller, mesh_renderer::MeshRenderer, shape_renderer::ShapeRenderer,
-    skybox_renderer::SkyboxRenderer, transform::Transform,
+use crate::{
+    components::{
+        button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
+        controller::Controller, mesh_renderer::MeshRenderer, shape_renderer::ShapeRenderer,
+        skybox_renderer::SkyboxRenderer, transform::Transform,
+    },
+    graphics::{lights::Light, material::TextureMaterial, mesh::Mesh, shaders::MeshShader},
 };
+
+pub type ComponentIterator<T> = Box<dyn Iterator<Item = T>>;
 
 pub enum ComponentEvent<T> {
     AddComponent(T),
     RemoveComponent(usize),
 }
 
-pub trait ComponentIterator<'a, T> {
-    fn iter(&self) -> &[T];
-    fn reload(&mut self);
+pub trait ComponentIteratorGenerator<'a, T> {
+    fn iter(&'a self) -> Box<dyn Iterator<Item = T> + 'a>;
+}
+
+pub trait ComponentMutIteratorGenerator<'a, T> {
+    fn iter(&'a mut self) -> Box<dyn Iterator<Item = T> + 'a>;
 }
 
 pub trait EntityManagerTrait<T> {
@@ -34,13 +43,12 @@ pub struct EntityManager {
     ),
     skyboxes: (Vec<usize>, Vec<SkyboxRenderer>),
     cameras: (Vec<usize>, Vec<Box<dyn Controller>>, Vec<Camera>),
-    meshes: (Vec<usize>, Vec<Transform>, Vec<MeshRenderer>),
-
-    transform_shape_iter: Vec<((usize, *const Transform), *const ShapeRenderer)>,
-    trigger_handler_iter: Vec<((usize, *const ButtonTrigger), *const dyn ButtonHandler)>,
-    skybox_iter: Vec<(usize, *const SkyboxRenderer)>,
-    camera_controller_iter: Vec<((usize, *const (dyn Controller)), *mut Camera)>,
-    transform_mesh_iter: Vec<((usize, *const Transform), *const MeshRenderer)>,
+    meshes: (
+        Vec<usize>,
+        Vec<Transform>,
+        Vec<Mesh<MeshShader, TextureMaterial>>,
+    ),
+    lights: (Vec<usize>, Vec<Transform>, Vec<Light>),
 
     next_entity_id: usize,
 }
@@ -51,6 +59,7 @@ impl EntityManager {
         let skyboxes = (vec![], vec![]);
         let cameras = (vec![], vec![], vec![]);
         let meshes = (vec![], vec![], vec![]);
+        let lights = (vec![], vec![], vec![]);
 
         EntityManager {
             next_entity_id: 0,
@@ -58,11 +67,7 @@ impl EntityManager {
             skyboxes,
             cameras,
             meshes,
-            transform_shape_iter: vec![],
-            trigger_handler_iter: vec![],
-            skybox_iter: vec![],
-            camera_controller_iter: vec![],
-            transform_mesh_iter: vec![],
+            lights,
         }
     }
 
@@ -72,103 +77,80 @@ impl EntityManager {
     }
 }
 
-impl<'a> ComponentIterator<'a, ((usize, *const Transform), *const ShapeRenderer)>
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ShapeRenderer)> for EntityManager {
+    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a ShapeRenderer)> + 'a> {
+        let transforms = self.menu_buttons.1.iter();
+        let shapes = self.menu_buttons.2.iter();
+        Box::new(transforms.zip(shapes))
+    }
+}
+
+impl<'a> ComponentIteratorGenerator<'a, ((usize, &'a ButtonTrigger), &'a dyn ButtonHandler)>
     for EntityManager
 {
-    fn iter(&self) -> &[((usize, *const Transform), *const ShapeRenderer)] {
-        &self.transform_shape_iter
+    fn iter(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = ((usize, &'a ButtonTrigger), &'a dyn ButtonHandler)> + 'a> {
+        let entities = self.menu_buttons.0.iter().map(|entity| *entity);
+        let triggers = self.menu_buttons.3.iter();
+        let handlers = self.menu_buttons.4.iter().map(|handler| handler.as_ref());
+        Box::new(entities.zip(triggers).zip(handlers))
     }
+}
 
-    fn reload(&mut self) {
-        let entities = self.menu_buttons.0.iter().map(|e| *e);
-        let transforms = self.menu_buttons.1.iter().map(|t| t as *const Transform);
-        let shapes = self
-            .menu_buttons
-            .2
-            .iter()
-            .map(|s| s as *const ShapeRenderer);
-        self.transform_shape_iter = entities.zip(transforms).zip(shapes).collect()
+pub type SkyboxBundle<'a> = (usize, &'a SkyboxRenderer);
+
+impl<'a> ComponentIteratorGenerator<'a, SkyboxBundle<'a>> for EntityManager {
+    fn iter(&'a self) -> Box<dyn Iterator<Item = SkyboxBundle<'a>> + 'a> {
+        let entities = self.skyboxes.0.iter().map(|entity| *entity);
+        let skyboxes = self.skyboxes.1.iter();
+        Box::new(entities.zip(skyboxes))
+    }
+}
+
+impl<'a> ComponentMutIteratorGenerator<'a, ((usize, &'a dyn Controller), &'a mut Camera)>
+    for EntityManager
+{
+    fn iter(
+        &'a mut self,
+    ) -> Box<dyn Iterator<Item = ((usize, &'a dyn Controller), &'a mut Camera)> + 'a> {
+        let entities = self.cameras.0.iter().map(|entity| *entity);
+        let controllers = self.cameras.1.iter().map(|controller| controller.as_ref());
+        let cameras = self.cameras.2.iter_mut();
+        Box::new(entities.zip(controllers).zip(cameras))
     }
 }
 
 impl<'a>
-    ComponentIterator<
+    ComponentIteratorGenerator<
         'a,
         (
-            (usize, *const ButtonTrigger),
-            *const (dyn ButtonHandler + 'a),
+            (usize, &'a Transform),
+            &'a Mesh<MeshShader, TextureMaterial>,
         ),
     > for EntityManager
 {
     fn iter(
-        &self,
-    ) -> &[(
-        (usize, *const ButtonTrigger),
-        *const (dyn ButtonHandler + 'a),
-    )] {
-        &self.trigger_handler_iter
-    }
-
-    fn reload(&mut self) {
-        let entities = self.menu_buttons.0.iter().map(|e| *e);
-        let triggers = self
-            .menu_buttons
-            .3
-            .iter()
-            .map(|t| t as *const ButtonTrigger);
-        let handlers = self
-            .menu_buttons
-            .4
-            .iter()
-            .map(|h| &**h as *const (dyn ButtonHandler));
-
-        self.trigger_handler_iter = entities.zip(triggers).zip(handlers).collect();
+        &'a self,
+    ) -> Box<
+        dyn Iterator<
+                Item = (
+                    (usize, &'a Transform),
+                    &'a Mesh<MeshShader, TextureMaterial>,
+                ),
+            > + 'a,
+    > {
+        let entities = self.meshes.0.iter().map(|entity| *entity);
+        let transforms = self.meshes.1.iter();
+        let meshes = self.meshes.2.iter();
+        Box::new(entities.zip(transforms).zip(meshes))
     }
 }
 
-pub type SkyboxBundle = (usize, *const SkyboxRenderer);
-
-impl<'a> ComponentIterator<'a, SkyboxBundle> for EntityManager {
-    fn iter(&self) -> &[(usize, *const SkyboxRenderer)] {
-        &self.skybox_iter
-    }
-
-    fn reload(&mut self) {
-        let entities = self.skyboxes.0.iter().map(|e| *e);
-        let skyboxes = self.skyboxes.1.iter().map(|s| s as *const SkyboxRenderer);
-
-        self.skybox_iter = entities.zip(skyboxes).collect();
-    }
-}
-
-impl<'a> ComponentIterator<'a, ((usize, *const (dyn Controller + 'a)), *mut Camera)>
-    for EntityManager
-{
-    fn iter(&self) -> &[((usize, *const (dyn Controller + 'a)), *mut Camera)] {
-        &self.camera_controller_iter
-    }
-
-    fn reload(&mut self) {
-        let entities = self.cameras.0.iter().map(|e| *e);
-        let controller = self.cameras.1.iter_mut().map(|c| {
-            return (*c).as_mut() as *const dyn Controller;
-        });
-        let cameras = self.cameras.2.iter_mut().map(|c| c as *mut Camera);
-
-        self.camera_controller_iter = entities.zip(controller).zip(cameras).collect();
-    }
-}
-
-impl<'a> ComponentIterator<'a, ((usize, *const Transform), *const MeshRenderer)> for EntityManager {
-    fn iter(&self) -> &[((usize, *const Transform), *const MeshRenderer)] {
-        &self.transform_mesh_iter
-    }
-
-    fn reload(&mut self) {
-        let entities = self.meshes.0.iter().map(|e| *e);
-        let transforms = self.meshes.1.iter().map(|t| t as *const Transform);
-        let renderers = self.meshes.2.iter().map(|r| r as *const MeshRenderer);
-
-        self.transform_mesh_iter = entities.zip(transforms).zip(renderers).collect();
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Light)> for EntityManager {
+    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a Light)> + 'a> {
+        let transforms = self.lights.1.iter();
+        let lights = self.lights.2.iter();
+        Box::new(transforms.zip(lights))
     }
 }

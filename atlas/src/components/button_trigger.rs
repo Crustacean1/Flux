@@ -1,6 +1,7 @@
 use glam::{Vec2, Vec3};
 
 use crate::{
+    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
     event_bus::{EventReader, EventReaderTrait, EventSender},
     graphics::graphics_context::IoEvent,
 };
@@ -56,7 +57,7 @@ impl ButtonTriggerSystem {
 
     pub fn check_buttons<'a>(
         &self,
-        buttons: &[((usize, *const ButtonTrigger), *const dyn ButtonHandler)],
+        entity_manager: &EntityManager,
         event_reader: &EventReader,
         event_sender: &mut EventSender,
     ) {
@@ -64,22 +65,24 @@ impl ButtonTriggerSystem {
             IoEvent::LeftMousePress(_) => true,
             _ => false,
         }) else {return;};
-        Self::check_buttons_for_event(buttons, *click_pos, event_sender);
+        Self::check_buttons_for_event(entity_manager, *click_pos, event_sender);
     }
 
     pub fn check_buttons_for_event<'a>(
-        buttons: &[((usize, *const ButtonTrigger), *const dyn ButtonHandler)],
+        entity_manager: &EntityManager,
         (x, y): (f32, f32),
         event_sender: &mut EventSender,
     ) {
-        unsafe {
-            if let Some((_, handler)) = buttons
-                .iter()
-                .filter(|((_, trigger), _)| (**trigger).intersects(x, y))
-                .max_by_key(|((_, trigger), _)| (**trigger).level)
-            {
-                (**handler).on_click(event_sender);
-            }
+        if let Some((_, handler)) = entity_manager
+            .iter()
+            .filter(
+                |((_, trigger), _): &((usize, &ButtonTrigger), &dyn ButtonHandler)| {
+                    trigger.intersects(x, y)
+                },
+            )
+            .max_by_key(|((_, trigger), _)| trigger.level)
+        {
+            handler.on_click(event_sender);
         }
     }
 }

@@ -1,17 +1,21 @@
-use crate::components::{mesh_renderer::MeshRenderer, transform::Transform};
+use crate::{
+    components::transform::Transform,
+    graphics::{material::TextureMaterial, mesh::Mesh, shaders::MeshShader},
+};
 
-use super::{ComponentIterator, EntityManager, EntityManagerTrait};
+use super::{ComponentIteratorGenerator, EntityManager, EntityManagerTrait};
 
-impl EntityManagerTrait<(Transform, MeshRenderer)> for EntityManager {
-    fn add_entity(&mut self, (transform, mesh_renderer): (Transform, MeshRenderer)) -> usize {
+impl EntityManagerTrait<(Transform, Mesh<MeshShader, TextureMaterial>)> for EntityManager {
+    fn add_entity(
+        &mut self,
+        (transform, mesh_renderer): (Transform, Mesh<MeshShader, TextureMaterial>),
+    ) -> usize {
         let entity_id = self.next_entity_id;
         self.next_entity_id += 1;
 
         self.meshes.0.push(entity_id);
         self.meshes.1.push(transform);
         self.meshes.2.push(mesh_renderer);
-
-        ComponentIterator::<((usize, *const Transform), *const MeshRenderer)>::reload(self);
 
         entity_id
     }
@@ -20,3 +24,4 @@ impl EntityManagerTrait<(Transform, MeshRenderer)> for EntityManager {
         todo!()
     }
 }
+

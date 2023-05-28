@@ -1,29 +1,37 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use crate::graphics::material::TextureMaterial;
+use crate::graphics::material::{TextureMaterial, UiMaterial};
 
-use super::{resource::Resource, scene_resource_manager::LazyResource};
+use super::ResourceManager;
 
-pub fn collect_textures(
-    resource_files: &Vec<(String, Vec<PathBuf>)>,
-) -> HashMap<String, LazyResource<Resource<TextureMaterial>>> {
-    let Some((_,texture_resources)) = resource_files
-        .iter()
-        .find(|(resource_type, _)| resource_type == "materials") else{
-        return HashMap::new();
-    };
+pub fn load_mat(
+    res_id: &str,
+    ext: &str,
+    dir: &PathBuf,
+    res_man: &mut (impl ResourceManager<TextureMaterial> + ResourceManager<UiMaterial>),
+) {
+    if let Ok(files) = fs::read_dir(dir) {
+        let files: Vec<_> = files
+            .filter_map(|file| file.map(|file| Some(file.path())).ok()?)
+            .filter(|file| {
+                file.extension().map_or(false, |extension| {
+                    extension == "jpg" || extension == "jpeg" || extension == "png"
+                })
+            })
+            .collect();
 
-    texture_resources
-        .iter()
-        .filter(|file| texture_resource_filer(file))
-        .filter_map(|path| {
-            let filename = String::from(path.file_stem()?.to_str()?);
-            Some((filename, LazyResource::Unloaded(path.clone())))
-        })
-        .collect()
-}
-
-fn texture_resource_filer(path: &PathBuf) -> bool {
-    let Some(ext) = path.extension() else {return false;};
-    ext == "jpg" || ext == "jpeg" || ext == "png"
+        match ext {
+            "ui_mat" => {
+                UiMaterial::load(&files)
+                    .map(|res| res_man.register(res_id, res))
+                    .unwrap();
+            }
+            "mesh_mat" => {
+                TextureMaterial::load(&files)
+                    .map(|res| res_man.register(res_id, res))
+                    .unwrap();
+            }
+            _ => {}
+        }
+    }
 }

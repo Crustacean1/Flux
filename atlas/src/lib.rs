@@ -1,3 +1,5 @@
+extern crate freetype;
+
 pub mod components;
 pub mod entity_manager;
 pub mod event_bus;

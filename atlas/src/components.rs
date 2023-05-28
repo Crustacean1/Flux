@@ -5,6 +5,7 @@ pub mod controller;
 pub mod mesh_renderer;
 pub mod shape_renderer;
 pub mod skybox_renderer;
+pub mod text_renderer;
 pub mod transform;
 
 pub trait ComponentType {

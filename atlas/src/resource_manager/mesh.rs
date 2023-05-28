@@ -1,21 +1,24 @@
 use std::{
-    collections::HashMap,
     fs::{self, File},
     io::BufReader,
-    iter::repeat,
     path::PathBuf,
 };
 
 use glam::{Mat4, Vec4};
-use gltf::{iter::Buffers, Gltf};
-
-use crate::{
-    game_root::GameError,
-    graphics::{
-        mesh::Primitive,
-        vertices::base_vertices::{TriangleIndex, Vertex3PT},
-    },
+use gltf::{
+    iter::{Buffers, Materials},
+    Gltf,
 };
+
+use crate::graphics::{
+    material::TextureMaterial,
+    mesh::Mesh,
+    primitive::{MeshIndices, Primitive},
+    shaders::MeshShader,
+    texture::{ChannelLayout, Texture},
+};
+
+use super::{resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager};
 
 #[derive(Clone)]
 struct MeshNode<'a> {
@@ -28,51 +31,49 @@ impl<'a> MeshNode<'a> {
     }
 }
 
-pub fn collect_mesh(
-    index: &Vec<(String, Vec<PathBuf>)>,
-) -> HashMap<String, Primitive<Vertex3PT, TriangleIndex>> {
-    let Some((_,meshes)) = index.iter().find(|(res_type, _)| res_type == "meshes") else{
-        return HashMap::new();
-    };
-
-    meshes
-        .iter()
-        .filter(|path| {
-            path.extension().map_or(false, |path| {
-                path.to_str().map_or(false, |path| path == "glb")
+pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager) {
+    if let Ok(mut files) = fs::read_dir(dir) {
+        if let Some(Ok(mesh_filename)) = files.find(|file_entry| {
+            file_entry.as_ref().map_or(false, |file| {
+                file.path().extension().map_or(false, |extension| {
+                    extension
+                        .to_str()
+                        .map_or(false, |extension| extension == "glb" || extension == "gltf")
+                })
             })
-        })
-        .map(|path| {
-            if let Ok(file) = File::open(path) {
-                let reader = BufReader::new(file);
+        }) {
+            if let Ok(mesh_file) = File::open(mesh_filename.path()) {
+                let reader = BufReader::new(mesh_file);
                 if let Ok(gltf) = Gltf::from_reader(reader) {
-                    load_mesh(&gltf)
+                    res_man.register(res_id, read_mesh(&gltf, dir));
                 } else {
-                    vec![]
+                    println!("Mesh failure occured ");
                 }
-            } else {
-                vec![]
             }
-        })
-        .flatten()
-        .map(|(name, mesh)| (name.clone(), mesh))
-        .collect()
+        }
+    }
+
+    let default_material: Resource<TextureMaterial> = res_man.get("default");
+
+    res_man.register(
+        "sample",
+        Mesh::<MeshShader, TextureMaterial> {
+            primitives: vec![(default_material.res, Primitive::sphere(1.0, 3))],
+        },
+    );
 }
 
-fn load_mesh(gltf: &Gltf) -> Vec<(String, Primitive<Vertex3PT, TriangleIndex>)> {
+fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, TextureMaterial> {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
     let buffers = load_buffers(buffers, blob);
+    let materials = load_materials(gltf.materials(), &buffers, root);
 
-    println!("Mesh node definition:");
-    gltf.nodes()
-        .for_each(|node| println!("\tNode: {}", node.name().unwrap_or("Unnamed node")));
-
-    gltf.nodes()
+    let primitives: Vec<_> = gltf
+        .nodes()
         .filter_map(|node| -> Option<Vec<_>> {
             let mesh = node.mesh()?;
-            let mesh_name = String::from(mesh.name().unwrap_or("UMO"));
             let transform = Mat4::from_cols_array_2d(&node.transform().matrix());
 
             Some(
@@ -85,46 +86,75 @@ fn load_mesh(gltf: &Gltf) -> Vec<(String, Primitive<Vertex3PT, TriangleIndex>)> 
                         let positions = reader.read_positions()?;
                         let tex_coords =
                             reader.read_tex_coords(0).map(|coords| coords.into_f32())?;
-                        let mut indices =
-                            reader.read_indices().map(|indices| indices.into_u32())?;
+                        let normals = reader.read_normals()?;
+                        let indices = reader.read_indices().map(|indices| indices.into_u32())?;
+
+                        let positions = positions
+                            .map(|pos| transform * Vec4::new(pos[0], pos[1], pos[2], 1.0))
+                            .map(|vec| [vec[0], vec[1], vec[2]]);
+
+                        let normals = normals
+                            .map(|normal| {
+                                transform * Vec4::new(normal[0], normal[1], normal[2], 0.0)
+                            })
+                            .map(|normal| [normal[0], normal[1], normal[2]]);
 
                         let vertices: Vec<_> = positions
                             .zip(tex_coords)
-                            .map(|(pos, tex)| {
-                                (transform * Vec4::new(pos[0], pos[1], pos[2], 1.0), tex)
+                            .zip(normals)
+                            .map(|((pos, tex), norm)| {
+                                [
+                                    pos[0], pos[1], pos[2], tex[0], tex[1], norm[0], norm[1],
+                                    norm[2],
+                                ]
                             })
-                            .map(|(pos, tex)| Vertex3PT {
-                                pos: [pos.x, pos.y, pos.z],
-                                tex,
-                            })
+                            .flatten()
                             .collect();
 
-                        let indices: Vec<_> = repeat(())
-                            .map_while(|_| {
-                                Some(TriangleIndex {
-                                    triangle: [indices.next()?, indices.next()?, indices.next()?],
-                                })
-                            })
-                            .collect();
+                        let indices: Vec<_> = indices.collect();
 
-                        Some((mesh_name.clone(), Primitive::new(&vertices, &indices)))
+                        let material = if let Some(material) = primitive.material().index() {
+                            materials[material].clone()
+                        } else {
+                            TextureMaterial::default()
+                        };
+
+                        Some((
+                            material,
+                            Primitive::new(
+                                &vertices,
+                                &[3, 2, 3],
+                                &mut MeshIndices::Triangles(indices),
+                            ),
+                        ))
                     })
                     .collect(),
             )
         })
         .flatten()
-        .collect()
+        .collect();
+    return Mesh { primitives };
 }
 
 fn load_buffers(buffers: Buffers, blob: &[u8]) -> Vec<Vec<u8>> {
     buffers
         .map(|buffer| match buffer.source() {
-            gltf::buffer::Source::Bin => Vec::from(blob),
+            gltf::buffer::Source::Bin => Vec::from(&blob[0..buffer.length()]),
             gltf::buffer::Source::Uri(uri) => buffer_from_file(uri).unwrap(),
         })
         .collect()
 }
 
-fn buffer_from_file(uri: &str) -> Result<Vec<u8>, GameError> {
-    Ok(fs::read_to_string(uri).map(|s| Vec::from(s))?)
+fn load_materials(
+    materials: Materials,
+    buffers: &[Vec<u8>],
+    root: &PathBuf,
+) -> Vec<TextureMaterial> {
+    materials
+        .map(|material| TextureMaterial::default())
+        .collect()
+}
+
+fn buffer_from_file(uri: &str) -> Option<Vec<u8>> {
+    Some(fs::read_to_string(uri).map(|s| Vec::from(s)).ok()?)
 }

@@ -1,134 +1,83 @@
-use std::{mem, path::PathBuf};
-
-use glad_gl::gl;
-use image::GenericImageView;
+use std::path::PathBuf;
 
 use crate::game_root::GameError;
 
-pub trait Material {}
+use super::{
+    shaders::{MeshShader, ShaderProgram, SkyboxShader, UiShader},
+    texture::Texture,
+};
 
-#[derive(Clone)]
-pub enum ChannelLayout {
-    Rgb,
-    Rgba,
-}
-
-impl ChannelLayout {
-    pub fn into_gl(&self) -> u32 {
-        match self {
-            ChannelLayout::Rgb => gl::RGB,
-            ChannelLayout::Rgba => gl::RGBA,
-        }
-    }
+pub trait Material {
+    type Shader: Clone;
+    fn bind(&self, shader: &ShaderProgram<Self::Shader>);
 }
 
 #[derive(Clone)]
 pub struct TextureMaterial {
-    texture_id: u32,
-    dimensions: (u32, u32),
-    channel_layout: ChannelLayout,
+    pub diffuse: Texture,
 }
 
-impl Material for TextureMaterial {}
+impl Default for TextureMaterial {
+    fn default() -> Self {
+        Self {
+            diffuse: Texture::from_color((0.2, 0.2, 0.2)),
+        }
+    }
+}
+
+impl Material for TextureMaterial {
+    type Shader = MeshShader;
+    fn bind(&self, shader: &ShaderProgram<MeshShader>) {
+        self.diffuse.bind();
+        shader.bind_diffuse(self.diffuse.texture());
+    }
+}
 
 impl TextureMaterial {
-    pub fn from_color((r, g, b): (f32, f32, f32)) -> Self {
-        let color_texture: [u8; 6] = [
-            (r * 255.0) as u8,
-            (g * 255.0) as u8,
-            (b * 255.0) as u8,
-            0 as u8,
-            0 as u8,
-            0 as u8,
-        ];
-
-        let dimensions = (2, 1);
-        let channel_layout = ChannelLayout::Rgb;
-
-        let texture_id = Self::create_texture();
-        Self::load_texture(&color_texture, &channel_layout, dimensions);
-
-        TextureMaterial {
-            texture_id,
-            dimensions,
-            channel_layout: ChannelLayout::Rgb,
-        }
-    }
-
-    pub fn from_file(path: &PathBuf) -> Result<TextureMaterial, GameError> {
-        let Ok(img) = image::open(path.to_str().unwrap()) else {return Err(GameError::new(&format!("Failed to open texture:\n {:?}", path)))};
-
-        let channel_layout = match img.color() {
-            image::ColorType::Rgb8 => ChannelLayout::Rgb,
-            image::ColorType::Rgba8 => ChannelLayout::Rgba,
-            _ => {
-                return Err(GameError::new(&format!(
-                    "Failed to read extension: '{:?}'",
-                    path
-                )))
-            }
-        };
-
-        let img_data: Result<&[u8], GameError> = match channel_layout {
-            ChannelLayout::Rgb => {
-                let Some(data) = img.as_rgb8() else {return Err(GameError::new(&format!("Failed to read data from rgb texture: '{:?}'", path)))};
-                Ok(data as &[u8])
-            }
-            ChannelLayout::Rgba => {
-                let Some(data) = img.as_rgba8() else {return Err(GameError::new(&format!("Failed to read data from rgba texture: '{:?}'", path)))};
-                Ok(data as &[u8])
-            }
-        };
-
-        let img_data = img_data?;
-        let texture_id = Self::create_texture();
-        Self::load_texture(img_data, &channel_layout, img.dimensions());
-
+    pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
         Ok(TextureMaterial {
-            texture_id,
-            dimensions: (0, 0),
-            channel_layout,
+            diffuse: load_named_texture("diffuse", textures)?,
         })
     }
+}
 
-    pub fn texture(&self) -> u32 {
-        self.texture_id
-    }
+#[derive(Clone)]
+pub struct UiMaterial {
+    tex: Texture,
+}
 
-    fn create_texture() -> u32 {
-        let mut texture_id = 0;
-        unsafe {
-            gl::GenTextures(1, &mut texture_id);
-            gl::BindTexture(gl::TEXTURE_2D, texture_id);
-
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        }
-        texture_id
-    }
-
-    pub fn bind(&self) {
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + self.texture_id);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture_id);
+impl Default for UiMaterial {
+    fn default() -> Self {
+        Self {
+            tex: Texture::from_color((1.0, 0.0, 1.0)),
         }
     }
+}
 
-    fn load_texture(data: &[u8], channel_layout: &ChannelLayout, dimensions: (u32, u32)) {
-        unsafe {
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                channel_layout.into_gl() as i32,
-                dimensions.0 as i32,
-                dimensions.1 as i32,
-                0,
-                channel_layout.into_gl(),
-                gl::UNSIGNED_BYTE,
-                mem::transmute(data.as_ptr()),
-            );
-        }
+impl Material for UiMaterial {
+    type Shader = UiShader;
+    fn bind(&self, shader: &ShaderProgram<UiShader>) {
+        self.tex.bind();
+        shader.bind_texture(self.tex.texture());
+    }
+}
+
+impl UiMaterial {
+    pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
+        Ok(UiMaterial {
+            tex: load_named_texture("texture", textures)?,
+        })
+    }
+}
+
+fn load_named_texture(name: &str, textures: &Vec<PathBuf>) -> Result<Texture, GameError> {
+    if let Some(tex) = textures.iter().find(|t| {
+        t.file_stem().map_or(false, |name| {
+            name.to_str().map_or(false, |name| name == "diffuse")
+        })
+    }) {
+        Ok(Texture::from_file(tex)?)
+    } else {
+        Err(GameError::new("Diffuse texture not found"))
     }
 }

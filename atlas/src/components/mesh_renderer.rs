@@ -1,56 +1,69 @@
-use std::ptr;
+use glam::{Vec3, Vec4};
 
-use glad_gl::gl;
-
-use crate::graphics::{
-    material::TextureMaterial,
-    mesh::Primitive,
-    shaders::{ShaderProgram, SkyboxShader},
-    vertices::base_vertices::{TriangleIndex, Vertex3PT},
+use crate::{
+    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
+    graphics::{
+        lights::Light,
+        material::TextureMaterial,
+        mesh::Mesh,
+        shaders::{MeshShader, ShaderProgram},
+    },
 };
 
 use super::{camera::Camera, transform::Transform};
 
-type MeshType = Primitive<Vertex3PT, TriangleIndex>;
-
 pub struct MeshRenderer {
-    pub mesh: MeshType,
+    pub mesh: Mesh<MeshShader, TextureMaterial>,
     pub material: TextureMaterial,
 }
 
 pub struct MeshRendererSystem {
-    shader: ShaderProgram<SkyboxShader>,
+    shader: ShaderProgram<MeshShader>,
 }
 
+type MeshBundle<'a> = (
+    (usize, &'a Transform),
+    &'a Mesh<MeshShader, TextureMaterial>,
+);
+
+type LightBundle<'a> = (&'a Transform, &'a Light);
+
 impl MeshRendererSystem {
-    pub fn new(shader: ShaderProgram<SkyboxShader>) -> Self {
+    pub fn new(shader: ShaderProgram<MeshShader>) -> Self {
         MeshRendererSystem { shader }
     }
 
-    pub fn render(
-        &self,
-        camera: &Camera,
-        meshes: &[((usize, *const Transform), *const MeshRenderer)],
-    ) {
-        let view_projection = camera.projection_view_mat();
-        meshes
+    pub fn render(&mut self, camera: &Camera, entity_manager: &EntityManager) {
+        let projection_view = camera.projection_view_mat();
+        let view = camera.view_mat();
+
+        self.shader.reset_directional_lights();
+        entity_manager
             .iter()
-            .for_each(|((_, transform), mesh_renderer)| unsafe {
-                let mesh_renderer = &**mesh_renderer;
-                let transform = &**transform;
+            .for_each(|(transform, light): LightBundle| match light {
+                Light::PointLight(light_color) => {
+                    self.shader
+                        .add_point_light(&transform.position, light_color);
+                }
+                Light::DirectionalLight(dir, light_color) => {
+                    let dir = view * Vec4::new(dir.x, dir.y, dir.z, 0.0);
+                    let dir = Vec3::new(dir.x, dir.y, dir.z);
+                    self.shader.add_directional_light(&dir, light_color);
+                }
+            });
 
-                let mvp = view_projection * transform.model();
-                self.shader.load_mvp(&mvp.to_cols_array());
-                mesh_renderer.mesh.bind();
-                mesh_renderer.material.bind();
-                self.shader.bind_material(&mesh_renderer.material);
+        entity_manager
+            .iter()
+            .for_each(|((_, transform), mesh): MeshBundle| {
+                let view_model = view * transform.model();
+                let projection_view_model = projection_view * transform.model();
 
-                gl::DrawElements(
-                    mesh_renderer.mesh.primitive_type(),
-                    mesh_renderer.mesh.count() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
+                self.shader
+                    .load_projection_view_model(&projection_view_model.to_cols_array());
+                self.shader.load_view_model(&view_model.to_cols_array());
+                self.shader.load_view(&view.to_cols_array());
+
+                mesh.render(&self.shader);
             })
     }
 }

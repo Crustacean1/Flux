@@ -1,15 +1,14 @@
 use glad_gl::gl;
+use glam::Vec3;
 
 use crate::game_root::GameError;
-use std::{
-    fs::File,
-    io::{self, Read},
-    marker::PhantomData,
-    mem,
-    path::PathBuf,
-};
+use std::{marker::PhantomData, mem, path::PathBuf};
 
-use super::material::TextureMaterial;
+use super::lights::LightColor;
+
+pub trait Shader<T: Clone> {
+    fn new(shader_id: u32) -> T;
+}
 
 impl From<(ShaderType, String)> for GameError {
     fn from((shader_type, error): (ShaderType, String)) -> Self {
@@ -20,13 +19,6 @@ impl From<(ShaderType, String)> for GameError {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ShaderSource {
-    pub vertex: Option<PathBuf>,
-    pub fragment: Option<PathBuf>,
-    pub geometry: Option<PathBuf>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum ShaderType {
     Vertex,
@@ -34,51 +26,29 @@ pub enum ShaderType {
     Geometry,
 }
 
+impl ShaderType {
+    pub fn to_gl(&self) -> u32 {
+        match self {
+            ShaderType::Vertex => gl::VERTEX_SHADER,
+            ShaderType::Fragment => gl::FRAGMENT_SHADER,
+            ShaderType::Geometry => gl::GEOMETRY_SHADER,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ShaderProgram<T: Clone> {
     shader_id: u32,
-    phantom: PhantomData<T>,
+    shader: T,
 }
 
-impl<T: Clone> ShaderProgram<T> {
-    pub fn load(source: &ShaderSource) -> Result<Self, GameError> {
-        let sources = [
-            (ShaderType::Vertex, source.vertex.clone()),
-            (ShaderType::Fragment, source.fragment.clone()),
-            (ShaderType::Geometry, source.geometry.clone()),
-        ];
-
-        let sources: Vec<_> = sources
-            .iter()
-            .filter_map(|(shader_type, source)| Some((*shader_type, source.clone()?)))
-            .map(|(shader_type, path)| (shader_type, Self::read_file(&path)))
-            .collect();
-
-        let shaders = sources
-            .iter()
-            .map(|(shader_type, source)| match source {
-                Ok(source) => match Self::compile_shader(*shader_type, source) {
-                    Ok(shader) => Ok(shader),
-                    Err(e) => Err((*shader_type, e)),
-                },
-                Err(e) => Err((*shader_type, e.to_string())),
-            })
-            .fold(
-                Ok(vec![]),
-                |shaders: Result<Vec<u32>, GameError>, result| {
-                    let mut shaders = shaders?;
-                    shaders.push(result.clone()?);
-                    Ok(shaders)
-                },
-            )?;
-
-        match Self::link_program(&shaders) {
-            Ok(shader_program) => Ok(Self {
-                shader_id: shader_program,
-                phantom: PhantomData,
-            }),
-            Err(e) => Err(GameError::new(&e)),
-        }
+impl<T: Clone + Shader<T>> ShaderProgram<T> {
+    pub fn new(shader_id: u32) -> Self {
+        let mut shader = Self {
+            shader_id,
+            shader: T::new(shader_id),
+        };
+        shader
     }
 
     pub fn bind(&self) {
@@ -87,103 +57,22 @@ impl<T: Clone> ShaderProgram<T> {
         }
     }
 
-    fn read_file(filepath: &PathBuf) -> Result<Vec<u8>, io::Error> {
-        let mut file = File::open(filepath)?;
-        let file_size = file.metadata()?.len() as usize;
-
-        let mut file_buffer: Vec<u8> = Vec::with_capacity(file_size);
-
-        file.read_to_end(&mut file_buffer)?;
-        file_buffer.push(0);
-
-        Ok(file_buffer)
+    pub fn load_projection_view_model(&self, mat: &[f32; 16]) {
+        self.load_mat(mat, "projection_view_model\0");
     }
 
-    fn compile_shader(shader_type: ShaderType, source: &[u8]) -> Result<u32, String> {
-        unsafe {
-            let shader_type = match shader_type {
-                ShaderType::Vertex => gl::VERTEX_SHADER,
-                ShaderType::Fragment => gl::FRAGMENT_SHADER,
-                ShaderType::Geometry => gl::GEOMETRY_SHADER,
-            };
-
-            let shader_id = match gl::CreateShader(shader_type) {
-                0 => {
-                    return Err(String::from("Failed to create shader"));
-                }
-                shader => shader,
-            };
-
-            let shader_src: *const i8 = mem::transmute(source.as_ptr());
-
-            gl::ShaderSource(shader_id, 1, &shader_src, std::ptr::null());
-            gl::CompileShader(shader_id);
-
-            match Self::check_for_errors(
-                shader_id,
-                gl::COMPILE_STATUS,
-                gl::GetShaderiv,
-                gl::GetShaderInfoLog,
-            ) {
-                Ok(_) => Ok(shader_id),
-                Err(msg) => Err(msg),
-            }
-        }
+    pub fn load_view_model(&self, mat: &[f32; 16]) {
+        self.load_mat(mat, "view_model\0");
     }
 
-    fn link_program(shaders: &[u32]) -> Result<u32, String> {
-        unsafe {
-            let program_id = gl::CreateProgram();
-
-            for shader in shaders {
-                gl::AttachShader(program_id, *shader);
-            }
-            gl::LinkProgram(program_id);
-
-            match Self::check_for_errors(
-                program_id,
-                gl::LINK_STATUS,
-                gl::GetProgramiv,
-                gl::GetProgramInfoLog,
-            ) {
-                Ok(_) => Ok(program_id),
-                Err(msg) => Err(format!("Failed to link shader '{}': {}", "standin", msg)),
-            }
-        }
+    pub fn load_view(&self, mat: &[f32; 16]) {
+        self.load_mat(mat, "view\0");
     }
 
-    pub fn check_for_errors(
-        target: u32,
-        log_type: u32,
-        get_status: unsafe fn(u32, u32, *mut i32),
-        get_logs: unsafe fn(u32, i32, *mut i32, *mut i8),
-    ) -> Result<(), String> {
-        unsafe {
-            let mut status: i32 = 0;
-            get_status(target, log_type, &mut status);
-
-            if status == 0 {
-                let mut err_buff: Vec<u8> = vec![0; 512];
-                let mut err_length = 0;
-
-                get_logs(
-                    target,
-                    err_buff.len() as i32,
-                    &mut err_length,
-                    mem::transmute(err_buff.get_unchecked_mut(0)),
-                );
-                return Err(String::from_utf8(err_buff)
-                    .expect("Compilation error message should conform to UTF-8"));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn load_mvp(&self, mat: &[f32; 16]) {
+    fn load_mat(&self, mat: &[f32; 16], name: &str) {
         unsafe {
             gl::UseProgram(self.shader_id);
-            let mvp = gl::GetUniformLocation(self.shader_id, mem::transmute("mvp\0".as_ptr()));
+            let mvp = gl::GetUniformLocation(self.shader_id, mem::transmute(name.as_ptr()));
             gl::UniformMatrix4fv(mvp, 1, gl::FALSE, mat.as_ptr());
         }
     }
@@ -192,8 +81,14 @@ impl<T: Clone> ShaderProgram<T> {
 #[derive(Clone)]
 pub struct UiShader;
 
+impl Shader<UiShader> for UiShader {
+    fn new(shader_id: u32) -> UiShader {
+        Self {}
+    }
+}
+
 impl ShaderProgram<UiShader> {
-    pub fn bind_material(&self, material: &TextureMaterial) {
+    pub fn bind_texture(&self, texture_id: u32) {
         unsafe {
             gl::UseProgram(self.shader_id);
             let mat_texture =
@@ -203,7 +98,7 @@ impl ShaderProgram<UiShader> {
                     println!("Failed to load uniform: 'mat_texture'");
                 }
                 _ => {
-                    gl::Uniform1i(mat_texture, material.texture() as i32);
+                    gl::Uniform1i(mat_texture, texture_id as i32);
                 }
             }
         }
@@ -213,8 +108,14 @@ impl ShaderProgram<UiShader> {
 #[derive(Clone)]
 pub struct SkyboxShader;
 
+impl Shader<SkyboxShader> for SkyboxShader {
+    fn new(shader_id: u32) -> SkyboxShader {
+        Self {}
+    }
+}
+
 impl ShaderProgram<SkyboxShader> {
-    pub fn bind_material(&self, material: &TextureMaterial) {
+    pub fn bind_diffuse(&self, diffuse: u32) {
         unsafe {
             gl::UseProgram(self.shader_id);
             let mat_texture =
@@ -224,9 +125,119 @@ impl ShaderProgram<SkyboxShader> {
                     println!("Failed to load uniform: 'mat_texture'");
                 }
                 _ => {
-                    gl::Uniform1i(mat_texture, material.texture() as i32);
+                    gl::Uniform1i(mat_texture, diffuse as i32);
                 }
             }
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct MeshShader {
+    directional_light_count_id: i32,
+    directional_light_ids: [[i32; 4]; 5],
+    directional_light_count: u32,
+}
+
+impl Shader<MeshShader> for MeshShader {
+    fn new(shader_id: u32) -> MeshShader {
+        let mut directional_light_ids: [[i32; 4]; 5] = [[0; 4]; 5];
+        let properties = ["ambient", "diffuse", "specular", "dir"];
+
+        unsafe {
+            gl::UseProgram(shader_id);
+
+            directional_light_ids
+                .iter_mut()
+                .enumerate()
+                .for_each(|(i, directional_light_id)| {
+                    directional_light_id
+                        .iter_mut()
+                        .enumerate()
+                        .for_each(|(j, property_id)| {
+                            let name = format!("directional_lights[{}].{}\0", i, properties[j]);
+                            *property_id =
+                                gl::GetUniformLocation(shader_id, mem::transmute(name.as_ptr()));
+                            if *property_id == -1 {
+                                println!("Couldn't find uniform: {} ", name);
+                            }
+                        });
+                });
+
+            MeshShader {
+                directional_light_ids,
+                directional_light_count: 0,
+                directional_light_count_id: 0,
+            }
+        }
+    }
+}
+
+impl ShaderProgram<MeshShader> {
+    pub fn bind_diffuse(&self, diffuse: u32) {
+        unsafe {
+            gl::UseProgram(self.shader_id);
+            let mat_texture =
+                gl::GetUniformLocation(self.shader_id, mem::transmute("mat_texture\0".as_ptr()));
+            match mat_texture {
+                -1 => {
+                    println!("Failed to load uniform: 'mat_texture'");
+                }
+                _ => {
+                    gl::Uniform1i(mat_texture, diffuse as i32);
+                }
+            }
+        }
+    }
+
+    pub fn add_point_light(&self, pos: &Vec3, color: &LightColor) {
+        todo!()
+    }
+    pub fn add_directional_light(&mut self, dir: &Vec3, color: &LightColor) {
+        unsafe {
+            let i = self.shader.directional_light_count as usize;
+            self.shader.directional_light_count += 1;
+
+            gl::UseProgram(self.shader_id);
+            gl::Uniform3f(
+                self.shader.directional_light_ids[i][0],
+                color.ambient.x,
+                color.ambient.y,
+                color.ambient.z,
+            );
+            gl::Uniform3f(
+                self.shader.directional_light_ids[i][1],
+                color.diffuse.x,
+                color.diffuse.y,
+                color.diffuse.z,
+            );
+            gl::Uniform3f(
+                self.shader.directional_light_ids[i][2],
+                color.specular.x,
+                color.specular.y,
+                color.specular.z,
+            );
+            gl::Uniform3f(self.shader.directional_light_ids[i][3], dir.x, dir.y, dir.z);
+            gl::Uniform1ui(
+                self.shader.directional_light_count_id,
+                self.shader.directional_light_count,
+            );
+        }
+    }
+
+    pub fn reset_directional_lights(&mut self) {
+        unsafe {
+            self.shader.directional_light_count = 0;
+            gl::Uniform1ui(
+                self.shader.directional_light_count_id,
+                self.shader.directional_light_count,
+            );
+        }
+    }
+}
+
+impl<T: Clone> Default for ShaderProgram<T> {
+    fn default() -> Self {
+        todo!()
     }
 }

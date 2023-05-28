@@ -3,7 +3,7 @@ use crate::components::{
     transform::Transform,
 };
 
-use super::{ComponentIterator, EntityManager, EntityManagerTrait};
+use super::{ComponentIteratorGenerator, EntityManager, EntityManagerTrait};
 
 impl
     EntityManagerTrait<(
@@ -31,11 +31,6 @@ impl
         self.menu_buttons.3.push(trigger);
         self.menu_buttons.4.push(handler);
 
-        ComponentIterator::<((usize, *const Transform), *const ShapeRenderer)>::reload(self);
-        ComponentIterator::<((usize, *const ButtonTrigger), *const dyn ButtonHandler)>::reload(
-            self,
-        );
-
         entity_id
     }
 
@@ -51,11 +46,7 @@ impl
             self.menu_buttons.2.remove(index);
             self.menu_buttons.3.remove(index);
             self.menu_buttons.4.remove(index);
-
-            ComponentIterator::<((usize, *const Transform), *const ShapeRenderer)>::reload(self);
-            ComponentIterator::<((usize, *const ButtonTrigger), *const dyn ButtonHandler)>::reload(
-                self,
-            );
         }
     }
 }
+

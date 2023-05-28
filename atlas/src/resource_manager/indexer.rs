@@ -1,69 +1,44 @@
-use std::{fs, path::PathBuf};
-
-use crate::game_root::GameError;
+use std::{fs, iter, path::PathBuf};
 
 pub struct ShaderEntry(Option<PathBuf>, Option<PathBuf>, Option<PathBuf>);
 
-pub fn index_resources(root: &PathBuf) -> Result<Vec<(String, Vec<PathBuf>)>, GameError> {
-    let subdirs: Vec<_> = list_entries(root)?
-        .iter()
-        .filter(|&entry| fs::metadata(entry.as_path()).map_or_else(|e| false, |m| m.is_dir()))
-        .fold(
-            Ok(vec![]),
-            |resource_vectors: Result<Vec<(String, Vec<PathBuf>)>, GameError>, subdir| {
-                let mut resource_vectors = resource_vectors?;
-                let resource_files = crawl_dirs(subdir)?;
-                resource_vectors.push((
-                    String::from(subdir.file_stem().unwrap().to_str().unwrap()),
-                    resource_files,
-                ));
-                Ok(resource_vectors)
-            },
-        )?;
-
-    Ok(subdirs)
+pub fn index_resources(root: &PathBuf) -> Vec<(String, String, PathBuf)> {
+    let mut resource_indexes = vec![];
+    index_resources_rec(root, root, &mut resource_indexes);
+    resource_indexes
 }
 
-fn crawl_dirs(root: &PathBuf) -> Result<Vec<PathBuf>, GameError> {
-    let local_resources = find_local_resources(root)?;
+fn index_resources_rec(
+    root: &PathBuf,
+    pwd: &PathBuf,
+    resource_indexes: &mut Vec<(String, String, PathBuf)>,
+) {
+    if let Ok(entries) = fs::read_dir(pwd.as_path()) {
+        let (resources, subdirs): (Vec<_>, Vec<_>) = entries
+            .filter_map(|e| e.ok())
+            .filter(|e| fs::metadata(e.path()).map_or(false, |m| m.is_dir()))
+            .partition(|e| e.path().extension().is_some());
 
-    let entries = fs::read_dir(root.as_path())?;
+        let mut new_resources: Vec<_> = resources
+            .iter()
+            .filter_map(|resource| {
+                let ext = String::from(resource.path().extension()?.to_str()?);
+                let basename = String::from(resource.path().file_stem()?.to_str()?);
+                let path = pwd.strip_prefix(root).ok()?;
+                let res_id: Vec<_> = path
+                    .iter()
+                    .filter_map(|segment| segment.to_str())
+                    .chain(iter::once(&basename as &str))
+                    .collect();
 
-    entries
-        .filter(|entry| match entry {
-            Ok(entry) => match fs::metadata(entry.path()) {
-                Ok(meta) => meta.is_dir(),
-                _ => false,
-            },
-            _ => false,
-        })
-        .fold(Ok(local_resources), |resources, subdir| {
-            let mut resources = resources?;
-            resources.append(&mut crawl_dirs(&root.join(subdir?.path()))?);
-            Ok(resources)
-        })
-}
+                Some((res_id.join("."), ext, resource.path()))
+            })
+            .collect();
 
-fn find_local_resources(root: &PathBuf) -> Result<Vec<PathBuf>, GameError> {
-    let Ok(entries) = fs::read_dir(root.as_path()) else {return Err(GameError::new("Failed to read directory contents"))};
+        resource_indexes.append(&mut new_resources);
 
-    Ok(entries
-        .map(|entry| entry.unwrap())
-        .filter(|entry| fs::metadata(entry.path()).unwrap().is_file())
-        .map(|file| file.path())
-        .collect())
-}
-
-fn list_entries(path: &PathBuf) -> Result<Vec<PathBuf>, GameError> {
-    let Ok(dir_entries) = fs::read_dir(path) else {return Err(GameError::new(&format!("Failed to read dir: {:?}", path)));};
-    dir_entries.fold(Ok(vec![]), |entries, entry| match entries {
-        Ok(mut entries) => match entry {
-            Ok(entry) => {
-                entries.push(entry.path());
-                Ok(entries)
-            }
-            Err(e) => Err(GameError::new(&format!("Failed to read file {}\n", e))),
-        },
-        Err(e) => Err(e),
-    })
+        subdirs
+            .iter()
+            .for_each(|subdir| index_resources_rec(root, &subdir.path(), resource_indexes));
+    }
 }

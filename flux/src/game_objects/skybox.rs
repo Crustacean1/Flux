@@ -16,7 +16,7 @@ pub fn skybox(entity_manager: &mut EntityManager, resource_manager: &mut SceneRe
 
     let space_box_textures: Vec<_> = space_box_textures
         .iter()
-        .map(|texture| resource_manager.get(texture).expect("").res)
+        .map(|texture| resource_manager.get(texture).res)
         .collect();
 
     let space_box = SkyboxRenderer::new(50.0, &space_box_textures);

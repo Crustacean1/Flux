@@ -3,8 +3,7 @@ use std::{fmt, rc::Rc};
 use crate::{
     graphics::graphics_context::GraphicsContext,
     logger::{console_logger::ConsoleLogger, Logger},
-    resource_manager::{root_resource_manager::RootResourceManager, ResourceError},
-    scene::{Scene, SceneEvent},
+    scene::{Scene, SceneEvent}, resource_manager::scene_manager::SceneManager,
 };
 
 #[derive(Debug, Clone)]
@@ -27,16 +26,8 @@ impl fmt::Display for GameError {
     }
 }
 
-impl From<ResourceError> for GameError {
-    fn from(value: ResourceError) -> Self {
-        GameError {
-            msg: value.to_string(),
-        }
-    }
-}
-
 pub struct GameRoot {
-    root_resource_manager: RootResourceManager,
+    scene_manager: SceneManager,
     logger: Rc<dyn Logger>,
     graphics_context: GraphicsContext,
 }
@@ -45,22 +36,20 @@ impl GameRoot {
     pub fn new(title: &str) -> Result<Self, GameError> {
         let logger = Rc::new(ConsoleLogger::new());
         let graphics_context = GraphicsContext::new(title)?;
-        let mut root_resource_manager = RootResourceManager::new(logger.clone())?;
-
-        root_resource_manager.index_resources()?;
+        let scene_manager = SceneManager::new(logger.clone())?;
 
         Ok(GameRoot {
             logger,
-            root_resource_manager,
+            scene_manager,
             graphics_context,
         })
     }
 
     pub fn run(&mut self) {
-        let mut next_scene = String::from("main");
+        let mut next_scene = String::from("first_scene");
         loop {
             let mut scene: Box<dyn Scene> = match self
-                .root_resource_manager
+                .scene_manager
                 .get_scene(&next_scene, &mut self.graphics_context)
             {
                 Ok(scene) => scene,
@@ -89,8 +78,8 @@ impl GameRoot {
         }
     }
 
-    pub fn resource_manager_mut(&mut self) -> &mut RootResourceManager {
-        &mut self.root_resource_manager
+    pub fn scene_manager(&mut self) -> &mut SceneManager {
+        &mut self.scene_manager
     }
 }
 
