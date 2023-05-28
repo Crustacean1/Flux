@@ -11,15 +11,22 @@ use crate::{
 use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
 
 #[derive(Clone, Copy)]
-struct Character {
-    texture: Texture,
-    size: Vec2,
-    bearing: Vec2,
-    advance: f32,
+pub struct Character {
+    pub texture: Texture,
+    pub size: Vec2,
+    pub bearing: Vec2,
+    pub advance: f32,
 }
 
+#[derive(Clone)]
 pub struct Font {
-    characters: [Character; 128],
+    pub characters: [Character; 128],
+}
+
+impl Default for Font {
+    fn default() -> Self {
+        todo!()
+    }
 }
 
 pub fn load_font(
@@ -38,7 +45,7 @@ pub fn load_font(
                     })
                 }) {
                     match load_font_file(&font_file.path(), freetype) {
-                        Ok(_) => {}
+                        Ok(font) => res_man.register(res_id, font),
                         Err(e) => {
                             println!("Failed to load font:\n{}", e);
                         }
@@ -53,7 +60,9 @@ pub fn load_font(
 fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameError> {
     println!("Loading font: {:?}", path);
     let Ok(face) = freetype.new_face(path, 0) else {return Err(GameError::new("Couldn't create new font face"))};
+    face.set_pixel_sizes(0, 10);
     let default_texture = Texture::from_color((0.0, 0.0, 0.0));
+
     let mut characters = [Character {
         texture: default_texture.clone(),
         size: Vec2::new(0.0, 0.0),

@@ -1,5 +1,7 @@
+use std::mem::transmute;
+
 use atlas::{
-    components::transform::Transform,
+    components::{text_renderer::TextRenderer, transform::Transform},
     entity_manager::{EntityManager, EntityManagerTrait},
     game_root::GameError,
     graphics::{
@@ -8,7 +10,7 @@ use atlas::{
         mesh::Mesh,
         shaders::MeshShader,
     },
-    resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
+    resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
 };
 use glam::Vec3;
 
@@ -16,6 +18,8 @@ pub fn asteroids(
     entity_manager: &mut EntityManager,
     resource_manager: &mut SceneResourceManager,
 ) -> Result<(), GameError> {
+    let font: Font = resource_manager.get("main").res;
+
     let meshes = ["spaceship3", "spaceship2", "spaceship1", "impostor"];
 
     let meshes: Vec<Mesh<MeshShader, TextureMaterial>> = meshes
@@ -50,6 +54,14 @@ pub fn asteroids(
                 specular: Vec3::new(0.6, 0.6, 0.6),
             },
         ),
+    ));
+
+    entity_manager.add_entity((
+        Transform::pos(Vec3::new(10., 10., 0.)),
+        TextRenderer {
+            text: String::from("jp2gmd"),
+            font,
+        },
     ));
 
     Ok(())

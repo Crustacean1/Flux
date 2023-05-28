@@ -3,12 +3,13 @@ mod light;
 mod menu_button;
 mod mesh_renderer;
 mod skybox;
+mod text_renderer;
 
 use crate::{
     components::{
         button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
         controller::Controller, mesh_renderer::MeshRenderer, shape_renderer::ShapeRenderer,
-        skybox_renderer::SkyboxRenderer, transform::Transform,
+        skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer, transform::Transform,
     },
     graphics::{lights::Light, material::TextureMaterial, mesh::Mesh, shaders::MeshShader},
 };
@@ -49,6 +50,7 @@ pub struct EntityManager {
         Vec<Mesh<MeshShader, TextureMaterial>>,
     ),
     lights: (Vec<usize>, Vec<Transform>, Vec<Light>),
+    text_renderers: (Vec<usize>, Vec<Transform>, Vec<TextRenderer>),
 
     next_entity_id: usize,
 }
@@ -60,6 +62,7 @@ impl EntityManager {
         let cameras = (vec![], vec![], vec![]);
         let meshes = (vec![], vec![], vec![]);
         let lights = (vec![], vec![], vec![]);
+        let text_renderers = (vec![], vec![], vec![]);
 
         EntityManager {
             next_entity_id: 0,
@@ -68,6 +71,7 @@ impl EntityManager {
             cameras,
             meshes,
             lights,
+            text_renderers,
         }
     }
 
@@ -152,5 +156,13 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Light)> for EntityMa
         let transforms = self.lights.1.iter();
         let lights = self.lights.2.iter();
         Box::new(transforms.zip(lights))
+    }
+}
+
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for EntityManager {
+    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a TextRenderer)> + 'a> {
+        let transforms = self.text_renderers.1.iter();
+        let renderer = self.text_renderers.2.iter();
+        Box::new(transforms.zip(renderer))
     }
 }

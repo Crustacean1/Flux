@@ -1,3 +1,5 @@
+pub mod text_shader;
+
 use glad_gl::gl;
 use glam::Vec3;
 
@@ -44,7 +46,7 @@ pub struct ShaderProgram<T: Clone> {
 
 impl<T: Clone + Shader<T>> ShaderProgram<T> {
     pub fn new(shader_id: u32) -> Self {
-        let mut shader = Self {
+        let shader = Self {
             shader_id,
             shader: T::new(shader_id),
         };

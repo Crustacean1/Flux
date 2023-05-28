@@ -4,7 +4,7 @@ use std::mem::{self, size_of};
 use glad_gl::gl;
 
 use super::vertices::{
-    base_vertices::{TriangleIndex, Vertex3PT},
+    base_vertices::{TriangleIndex, Vertex2PT, Vertex3PT},
     Shapely,
 };
 
@@ -68,6 +68,8 @@ impl Primitive {
             gl::BindVertexArray(self.vao);
         }
     }
+
+    pub fn reload(&mut self, vertices: &[f32]) {}
 
     pub fn load(&mut self, vertices: &[f32], indices: &[u32]) {
         self.index_count = indices.len() as u32;
@@ -135,7 +137,21 @@ impl Primitive {
 
 impl Primitive {
     pub fn quad(width: f32, height: f32) -> Self {
-        todo!()
+        let vertices = Vertex2PT::quad(width, height);
+        let vertices: Vec<_> = vertices
+            .iter()
+            .map(|v| [v.pos[0], v.pos[1], v.tex[0], v.tex[1]])
+            .flatten()
+            .collect();
+
+        let indices = TriangleIndex::quad(width, height);
+        let indices: Vec<_> = indices
+            .iter()
+            .map(|TriangleIndex { triangle }| *triangle)
+            .flatten()
+            .collect();
+
+        Self::new(&vertices, &[2, 2], &mut MeshIndices::Triangles(indices))
     }
 
     pub fn skybox(side: f32) -> Self {

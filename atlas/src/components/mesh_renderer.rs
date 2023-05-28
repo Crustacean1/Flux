@@ -33,7 +33,7 @@ impl MeshRendererSystem {
         MeshRendererSystem { shader }
     }
 
-    pub fn render(&mut self, camera: &Camera, entity_manager: &EntityManager) {
+    pub fn render(&mut self, entity_manager: &EntityManager, camera: &Camera) {
         let projection_view = camera.projection_view_mat();
         let view = camera.view_mat();
 

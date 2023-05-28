@@ -9,7 +9,10 @@ use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
-    graphics::shaders::{MeshShader, Shader, ShaderProgram, ShaderType, SkyboxShader, UiShader},
+    graphics::shaders::{
+        text_shader::TextShader, MeshShader, Shader, ShaderProgram, ShaderType, SkyboxShader,
+        UiShader,
+    },
 };
 
 use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
@@ -155,7 +158,7 @@ impl ShaderUnit {
 
 pub fn load_shader(res_id: &str, ext: &str, path: &PathBuf, res_man: &mut SceneResourceManager) {
     if let Ok(shader_files) = fs::read_dir(path) {
-        if !["mesh_shader", "ui_shader", "sky_shader"].contains(&ext) {
+        if !["mesh_shader", "ui_shader", "sky_shader", "text_shader"].contains(&ext) {
             return;
         }
 
@@ -195,6 +198,13 @@ fn link_shader(
             res_id,
             ShaderUnit::link::<MeshShader>(res_id, &shader_units)?,
         ),
+        "text_shader" => {
+            println!("KKK: {:?}", res_id);
+            res_man.register(
+                res_id,
+                ShaderUnit::link::<TextShader>(res_id, &shader_units)?,
+            )
+        }
         _ => {}
     };
     Ok(())

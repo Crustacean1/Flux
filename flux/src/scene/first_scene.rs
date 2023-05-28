@@ -4,13 +4,14 @@ use atlas::{
         controller::{CameraControllerSystem, Controller},
         mesh_renderer::MeshRendererSystem,
         skybox_renderer::SkyboxSystem,
+        text_renderer::TextRendererSystem,
     },
     entity_manager::{ComponentIteratorGenerator, EntityManager, EntityManagerTrait},
     event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::{MeshShader, ShaderProgram, SkyboxShader},
+        shaders::{text_shader::TextShader, MeshShader, ShaderProgram, SkyboxShader},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
@@ -26,7 +27,9 @@ pub struct FirstScene {
     skybox_system: SkyboxSystem,
     mesh_system: MeshRendererSystem,
     camera_controller_system: CameraControllerSystem,
+    ui_camera: Camera,
     entity_manager: EntityManager,
+    text_system: TextRendererSystem,
     event_reader: EventReader,
     event_sender: EventSender,
 }
@@ -58,8 +61,14 @@ impl FirstScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build("first")?;
 
-        let (skybox_system, mesh_system, camera_controller_system, event_sender, event_reader) =
-            Self::create_systems(&mut resource_manager)?;
+        let (
+            skybox_system,
+            mesh_system,
+            camera_controller_system,
+            text_system,
+            event_sender,
+            event_reader,
+        ) = Self::create_systems(&mut resource_manager)?;
 
         let (width, height) = graphics_context.dimensions();
 
@@ -74,13 +83,16 @@ impl FirstScene {
 
         let camera_controller = Box::new(UserCameraController::new()) as Box<dyn Controller>;
         let cam_id = entity_manager.add_entity((camera_controller, camera));
+        let ui_camera = Camera::new_ortho(Frustrum::ui_frustrum(width as f32, height as f32));
 
         graphics_context.cursor_lock(true);
 
         Ok(Box::new(FirstScene {
             camera_controller_system,
+            ui_camera,
             skybox_system,
             mesh_system,
+            text_system,
             event_reader,
             event_sender,
             entity_manager,
@@ -112,6 +124,7 @@ impl FirstScene {
             SkyboxSystem,
             MeshRendererSystem,
             CameraControllerSystem,
+            TextRendererSystem,
             EventSender,
             EventReader,
         ),
@@ -119,17 +132,22 @@ impl FirstScene {
     > {
         let sky_shader: ShaderProgram<SkyboxShader> = resource_manager.get("basic").res;
         let mesh_shader: ShaderProgram<MeshShader> = resource_manager.get("basic").res;
+        let text_shader: ShaderProgram<TextShader> = resource_manager.get("basic").res;
 
         let skybox_system = SkyboxSystem::new(sky_shader.clone());
         let mesh_system = MeshRendererSystem::new(mesh_shader);
 
         let camera_controller_system = CameraControllerSystem::new();
+        let text_system = TextRendererSystem::new(text_shader);
+
         let event_sender = EventSender::new();
         let event_reader = EventReader::new();
+
         Ok((
             skybox_system,
             mesh_system,
             camera_controller_system,
+            text_system,
             event_sender,
             event_reader,
         ))
@@ -139,7 +157,9 @@ impl FirstScene {
         if let Some(camera) = self.entity_manager.get_camera(self.cam_id) {
             //self.skybox_system
             //.render(camera, self.entity_manager.iter());
-            self.mesh_system.render(camera, &self.entity_manager);
+            self.mesh_system.render(&self.entity_manager, camera);
+            self.text_system
+                .render(&self.entity_manager, &self.ui_camera)
         }
     }
 }
