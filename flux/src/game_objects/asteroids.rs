@@ -20,7 +20,7 @@ pub fn asteroids(
 ) -> Result<(), GameError> {
     let font: Font = resource_manager.get("main").res;
 
-    let meshes = ["spaceship3", "spaceship2", "spaceship1", "impostor"];
+    let meshes: [&str; 0] = [];
 
     let meshes: Vec<Mesh<MeshShader, TextureMaterial>> = meshes
         .iter()
@@ -57,9 +57,9 @@ pub fn asteroids(
     ));
 
     entity_manager.add_entity((
-        Transform::pos(Vec3::new(10., 10., 0.)),
+        Transform::pos(Vec3::new(10., 100., 0.)),
         TextRenderer {
-            text: String::from("jp2gmd"),
+            text: String::from("ABC1234567890!@#$%^&*(),./;'\\[]-=<>?:\"|{}_+"),
             font,
         },
     ));

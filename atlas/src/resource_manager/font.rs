@@ -5,7 +5,10 @@ use glam::Vec2;
 
 use crate::{
     game_root::GameError,
-    graphics::texture::{ChannelLayout, Texture},
+    graphics::{
+        shaders::{text_shader::TextShader, ShaderProgram},
+        texture::{ChannelLayout, Texture},
+    },
 };
 
 use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
@@ -15,7 +18,14 @@ pub struct Character {
     pub texture: Texture,
     pub size: Vec2,
     pub bearing: Vec2,
-    pub advance: f32,
+    pub advance: u32,
+}
+
+impl Character {
+    pub fn bind(&self, shader: &ShaderProgram<TextShader>) {
+        self.texture.bind();
+        shader.load_character(self.texture);
+    }
 }
 
 #[derive(Clone)]
@@ -41,7 +51,7 @@ pub fn load_font(
             if let Ok(font_files) = fs::read_dir(dir) {
                 if let Some(font_file) = font_files.filter_map(|font| font.ok()).find(|font| {
                     font.path().extension().map_or(false, |font| {
-                        font.to_str().map_or(false, |font| font == "otf")
+                        font.to_str().map_or(false, |font| font == "ttf")
                     })
                 }) {
                     match load_font_file(&font_file.path(), freetype) {
@@ -60,14 +70,14 @@ pub fn load_font(
 fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameError> {
     println!("Loading font: {:?}", path);
     let Ok(face) = freetype.new_face(path, 0) else {return Err(GameError::new("Couldn't create new font face"))};
-    face.set_pixel_sizes(0, 10);
+    face.set_pixel_sizes(0, 32);
     let default_texture = Texture::from_color((0.0, 0.0, 0.0));
 
     let mut characters = [Character {
         texture: default_texture.clone(),
         size: Vec2::new(0.0, 0.0),
         bearing: Vec2::new(0.0, 0.0),
-        advance: 0.0,
+        advance: 0,
     }; 128];
 
     characters
@@ -83,7 +93,7 @@ fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameEr
                 ) {
                     Ok(texture) => {
                         character.texture = texture;
-                        character.advance = face.glyph().advance().x as f32;
+                        character.advance = face.glyph().advance().x as u32;
                         character.size = Vec2::new(
                             face.glyph().bitmap().width() as f32,
                             face.glyph().bitmap().rows() as f32,

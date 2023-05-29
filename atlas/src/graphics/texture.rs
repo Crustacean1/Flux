@@ -17,7 +17,7 @@ pub enum ChannelLayout {
 impl ChannelLayout {
     pub fn gl_internal_format(&self) -> u32 {
         match self {
-            ChannelLayout::R8 => gl::R8,
+            ChannelLayout::R8 => gl::RED,
             ChannelLayout::Rgb8 => gl::RGB,
             ChannelLayout::Rgb16 => gl::RGB16UI,
             ChannelLayout::Rgba8 => gl::RGBA,
@@ -26,7 +26,7 @@ impl ChannelLayout {
 
     pub fn gl_format(&self) -> u32 {
         match self {
-            ChannelLayout::R8 => gl::R8,
+            ChannelLayout::R8 => gl::RED,
             ChannelLayout::Rgb8 => gl::RGB,
             ChannelLayout::Rgb16 => gl::RGB,
             ChannelLayout::Rgba8 => gl::RGBA,
@@ -55,7 +55,7 @@ impl Texture {
         let color_texture: [u8; 3] = [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8];
 
         let dimensions = (1, 1);
-        let channel_layout = ChannelLayout::Rgb8;
+        let channel_layout = ChannelLayout::R8;
 
         let texture_id = Self::create_texture();
         Self::load_texture(&color_texture, channel_layout, dimensions);

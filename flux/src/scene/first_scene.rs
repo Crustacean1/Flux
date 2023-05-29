@@ -24,8 +24,6 @@ use crate::game_objects::{
 
 pub struct FirstScene {
     cam_id: usize,
-    skybox_system: SkyboxSystem,
-    mesh_system: MeshRendererSystem,
     camera_controller_system: CameraControllerSystem,
     ui_camera: Camera,
     entity_manager: EntityManager,
@@ -61,14 +59,8 @@ impl FirstScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build("first")?;
 
-        let (
-            skybox_system,
-            mesh_system,
-            camera_controller_system,
-            text_system,
-            event_sender,
-            event_reader,
-        ) = Self::create_systems(&mut resource_manager)?;
+        let (camera_controller_system, text_system, event_sender, event_reader) =
+            Self::create_systems(&mut resource_manager)?;
 
         let (width, height) = graphics_context.dimensions();
 
@@ -90,8 +82,6 @@ impl FirstScene {
         Ok(Box::new(FirstScene {
             camera_controller_system,
             ui_camera,
-            skybox_system,
-            mesh_system,
             text_system,
             event_reader,
             event_sender,
@@ -121,8 +111,6 @@ impl FirstScene {
         resource_manager: &mut SceneResourceManager,
     ) -> Result<
         (
-            SkyboxSystem,
-            MeshRendererSystem,
             CameraControllerSystem,
             TextRendererSystem,
             EventSender,
@@ -130,12 +118,7 @@ impl FirstScene {
         ),
         GameError,
     > {
-        let sky_shader: ShaderProgram<SkyboxShader> = resource_manager.get("basic").res;
-        let mesh_shader: ShaderProgram<MeshShader> = resource_manager.get("basic").res;
         let text_shader: ShaderProgram<TextShader> = resource_manager.get("basic").res;
-
-        let skybox_system = SkyboxSystem::new(sky_shader.clone());
-        let mesh_system = MeshRendererSystem::new(mesh_shader);
 
         let camera_controller_system = CameraControllerSystem::new();
         let text_system = TextRendererSystem::new(text_shader);
@@ -144,8 +127,6 @@ impl FirstScene {
         let event_reader = EventReader::new();
 
         Ok((
-            skybox_system,
-            mesh_system,
             camera_controller_system,
             text_system,
             event_sender,
@@ -157,9 +138,8 @@ impl FirstScene {
         if let Some(camera) = self.entity_manager.get_camera(self.cam_id) {
             //self.skybox_system
             //.render(camera, self.entity_manager.iter());
-            self.mesh_system.render(&self.entity_manager, camera);
             self.text_system
-                .render(&self.entity_manager, &self.ui_camera)
+                .render(&self.entity_manager, &self.ui_camera);
         }
     }
 }

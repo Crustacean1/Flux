@@ -3,6 +3,8 @@ use std::mem::{self, size_of};
 
 use glad_gl::gl;
 
+use crate::game_root::GameError;
+
 use super::vertices::{
     base_vertices::{TriangleIndex, Vertex2PT, Vertex3PT},
     Shapely,
@@ -38,6 +40,7 @@ pub struct Primitive {
     vbo: u32,
     ebo: u32,
     index_count: u32,
+    vertex_count: u32,
     mode: u32,
 }
 
@@ -56,6 +59,7 @@ impl Primitive {
             vbo,
             ebo,
             mode: indices.to_gl(),
+            vertex_count: 0,
             index_count: 0,
         };
 
@@ -69,10 +73,27 @@ impl Primitive {
         }
     }
 
-    pub fn reload(&mut self, vertices: &[f32]) {}
+    pub fn reload(&mut self, vertices: &[f32]) -> Result<(), GameError> {
+        if (vertices.len() as u32) <= self.vertex_count {
+            unsafe {
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+
+                gl::BufferSubData(
+                    gl::ARRAY_BUFFER,
+                    0,
+                    (vertices.len() * size_of::<f32>()) as isize,
+                    mem::transmute(vertices.as_ptr()),
+                );
+            }
+            Ok(())
+        } else {
+            Err(GameError::new("Failed to reload buffer: invalid size"))
+        }
+    }
 
     pub fn load(&mut self, vertices: &[f32], indices: &[u32]) {
         self.index_count = indices.len() as u32;
+        self.vertex_count = vertices.len() as u32;
         unsafe {
             gl::BindVertexArray(self.vao);
 
@@ -143,6 +164,7 @@ impl Primitive {
             .map(|v| [v.pos[0], v.pos[1], v.tex[0], v.tex[1]])
             .flatten()
             .collect();
+        println!("Veritces: {:?}", vertices);
 
         let indices = TriangleIndex::quad(width, height);
         let indices: Vec<_> = indices

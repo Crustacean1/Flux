@@ -5,7 +5,7 @@ use atlas::{
 };
 
 pub fn skybox(entity_manager: &mut EntityManager, resource_manager: &mut SceneResourceManager) {
-    let space_box_textures = [
+    /*let space_box_textures = [
         "bkg1_right",
         "bkg1_left",
         "bkg1_bot",
@@ -20,5 +20,5 @@ pub fn skybox(entity_manager: &mut EntityManager, resource_manager: &mut SceneRe
         .collect();
 
     let space_box = SkyboxRenderer::new(50.0, &space_box_textures);
-    entity_manager.add_entity(space_box);
+    entity_manager.add_entity(space_box);*/
 }
