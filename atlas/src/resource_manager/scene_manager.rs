@@ -1,8 +1,5 @@
-use std::{collections::HashMap, rc::Rc};
-
-use crate::{
-    game_root::GameError, graphics::graphics_context::GraphicsContext, logger::Logger, scene::Scene,
-};
+use crate::{game_root::GameError, graphics::graphics_context::GraphicsContext, scene::Scene};
+use std::collections::HashMap;
 
 impl From<std::io::Error> for GameError {
     fn from(value: std::io::Error) -> Self {
@@ -17,7 +14,7 @@ pub struct SceneManager {
 }
 
 impl SceneManager {
-    pub fn new(logger: Rc<dyn Logger>) -> Result<Self, GameError> {
+    pub fn new() -> Result<Self, GameError> {
         Ok(SceneManager {
             scene_initializers: HashMap::new(),
         })

@@ -1,9 +1,6 @@
-use core::slice;
 use std::mem::{self, size_of};
 
 use glad_gl::gl;
-
-use crate::game_root::GameError;
 
 use super::vertices::{
     base_vertices::{TriangleIndex, Vertex2PT, Vertex3PT},
@@ -34,11 +31,12 @@ impl MeshIndices {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Primitive {
     pub vao: u32,
     vbo: u32,
     ebo: u32,
+    layout: Vec<usize>,
     index_count: u32,
     vertex_count: u32,
     mode: u32,
@@ -61,6 +59,7 @@ impl Primitive {
             mode: indices.to_gl(),
             vertex_count: 0,
             index_count: 0,
+            layout: Vec::from(shape),
         };
 
         mesh.load(&vertices, indices.to_buffer());
@@ -73,21 +72,55 @@ impl Primitive {
         }
     }
 
-    pub fn reload(&mut self, vertices: &[f32]) -> Result<(), GameError> {
-        if (vertices.len() as u32) <= self.vertex_count {
-            unsafe {
-                gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+    pub fn reload_vertices(&mut self, vertices: &[f32]) {
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            let mut buffer_size: i32 = 0;
+            gl::GetBufferParameteriv(gl::ARRAY_BUFFER, gl::BUFFER_SIZE, &mut buffer_size);
 
+            if vertices.len() <= buffer_size as usize {
                 gl::BufferSubData(
                     gl::ARRAY_BUFFER,
                     0,
                     (vertices.len() * size_of::<f32>()) as isize,
                     mem::transmute(vertices.as_ptr()),
                 );
+            } else {
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    vertices.len() as isize * size_of::<f32>() as isize,
+                    mem::transmute(vertices.as_ptr()),
+                    gl::STATIC_DRAW,
+                );
             }
-            Ok(())
-        } else {
-            Err(GameError::new("Failed to reload buffer: invalid size"))
+            let attrib_size: usize = self.layout.iter().sum();
+            self.vertex_count = (vertices.len() / attrib_size) as u32;
+        }
+    }
+
+    pub fn reload_indices(&mut self, indices: &[u32]) {
+        unsafe {
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+            let mut buffer_size: i32 = 0;
+            gl::GetBufferParameteriv(gl::ELEMENT_ARRAY_BUFFER, gl::BUFFER_SIZE, &mut buffer_size);
+
+            if indices.len() <= buffer_size as usize {
+                gl::BufferSubData(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    0,
+                    (indices.len() * size_of::<u32>()) as isize,
+                    mem::transmute(indices.as_ptr()),
+                );
+            } else {
+                gl::BufferData(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    indices.len() as isize * size_of::<u32>() as isize,
+                    mem::transmute(indices.as_ptr()),
+                    gl::STATIC_DRAW,
+                );
+            }
+
+            self.index_count = (indices.len() / 3) as u32;
         }
     }
 

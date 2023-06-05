@@ -10,8 +10,8 @@ use glad_gl::gl;
 use crate::{
     game_root::GameError,
     graphics::shaders::{
-        text_shader::TextShader, MeshShader, Shader, ShaderProgram, ShaderType, SkyboxShader,
-        UiShader,
+        mesh_shader::MeshShader, skybox_shader::SkyboxShader, text_shader::TextShader,
+        ui_shader::SpriteShader, Shader, ShaderProgram, ShaderType,
     },
 };
 
@@ -55,7 +55,7 @@ impl ShaderUnit {
                 gl::GetProgramiv,
                 gl::GetProgramInfoLog,
             ) {
-                Ok(_) => Ok(ShaderProgram::<T>::new(program_id)),
+                Ok(_) => Ok(ShaderProgram::<T>::build(program_id)?),
                 Err(msg) => Err(GameError::new(&format!(
                     "Failed to link shader '{}': {}",
                     shader_name, msg
@@ -139,7 +139,7 @@ impl ShaderUnit {
             }
         } else {
             Err(GameError::new(&format!(
-                "Failed to read filename at path: '{:?}'",
+                "Failed to read shader_unit filename at path: '{:?}'",
                 path
             )))
         }
@@ -171,11 +171,12 @@ pub fn load_shader(res_id: &str, ext: &str, path: &PathBuf, res_man: &mut SceneR
 
         match shader_units.map(|units| link_shader(res_id, ext, &units, res_man)) {
             Err(e) => {
-                println!("Shader compilation failed:\n{}", e);
+                println!("Shader compilation failed:\n\t{}", e);
             }
-            _ => {
-                println!("Shader loaded: {}", res_id);
+            Ok(Err(e)) => {
+                println!("Shader compilation failed:\n\t{}", e);
             }
+            _ => {}
         }
     }
 }
@@ -187,9 +188,10 @@ fn link_shader(
     res_man: &mut SceneResourceManager,
 ) -> Result<(), GameError> {
     match ext {
-        "ui_shader" => {
-            res_man.register(res_id, ShaderUnit::link::<UiShader>(res_id, &shader_units)?)
-        }
+        "ui_shader" => res_man.register(
+            res_id,
+            ShaderUnit::link::<SpriteShader>(res_id, &shader_units)?,
+        ),
         "sky_shader" => res_man.register(
             res_id,
             ShaderUnit::link::<SkyboxShader>(res_id, &shader_units)?,
@@ -198,13 +200,10 @@ fn link_shader(
             res_id,
             ShaderUnit::link::<MeshShader>(res_id, &shader_units)?,
         ),
-        "text_shader" => {
-            println!("KKK: {:?}", res_id);
-            res_man.register(
-                res_id,
-                ShaderUnit::link::<TextShader>(res_id, &shader_units)?,
-            )
-        }
+        "text_shader" => res_man.register(
+            res_id,
+            ShaderUnit::link::<TextShader>(res_id, &shader_units)?,
+        ),
         _ => {}
     };
     Ok(())

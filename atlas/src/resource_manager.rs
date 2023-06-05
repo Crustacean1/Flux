@@ -5,7 +5,7 @@ pub mod resource;
 pub mod scene_manager;
 pub mod scene_resource_manager;
 pub mod shader;
-pub mod texture;
+pub mod material;
 
 use resource::Resource;
 

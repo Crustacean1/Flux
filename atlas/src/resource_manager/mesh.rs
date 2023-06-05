@@ -11,11 +11,9 @@ use gltf::{
 };
 
 use crate::graphics::{
-    material::TextureMaterial,
     mesh::Mesh,
     primitive::{MeshIndices, Primitive},
-    shaders::MeshShader,
-    texture::{ChannelLayout, Texture},
+    shaders::mesh_shader::MeshShader, material::phong_material::PhongMaterial,
 };
 
 use super::{resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager};
@@ -53,17 +51,17 @@ pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager
         }
     }
 
-    let default_material: Resource<TextureMaterial> = res_man.get("default");
+    /*let default_material: Resource<TextureMaterial> = res_man.get("default");
 
     res_man.register(
         "sample",
         Mesh::<MeshShader, TextureMaterial> {
             primitives: vec![(default_material.res, Primitive::sphere(1.0, 3))],
         },
-    );
+    );*/
 }
 
-fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, TextureMaterial> {
+fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, PhongMaterial> {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
@@ -116,7 +114,7 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, TextureMaterial> {
                         let material = if let Some(material) = primitive.material().index() {
                             materials[material].clone()
                         } else {
-                            TextureMaterial::default()
+                            PhongMaterial::default()
                         };
 
                         Some((
@@ -147,12 +145,10 @@ fn load_buffers(buffers: Buffers, blob: &[u8]) -> Vec<Vec<u8>> {
 
 fn load_materials(
     materials: Materials,
-    buffers: &[Vec<u8>],
-    root: &PathBuf,
-) -> Vec<TextureMaterial> {
-    materials
-        .map(|material| TextureMaterial::default())
-        .collect()
+    _buffers: &[Vec<u8>],
+    _root: &PathBuf,
+) -> Vec<PhongMaterial> {
+    materials.map(|_| PhongMaterial::default()).collect()
 }
 
 fn buffer_from_file(uri: &str) -> Option<Vec<u8>> {

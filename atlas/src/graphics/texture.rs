@@ -149,7 +149,6 @@ impl Texture {
 
     pub fn bind(&self) {
         unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + self.texture_id);
             gl::BindTexture(gl::TEXTURE_2D, self.texture_id);
         }
     }

@@ -1,7 +1,7 @@
-use std::ptr::{self};
+use std::ptr;
 
 use glad_gl::gl;
-use glam::{Mat4, Vec2, Vec3};
+use glam::{Vec2, Vec3};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -16,7 +16,7 @@ use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
     text_quad: Primitive,
-    shader: ShaderProgram<TextShader>,
+    shader_program: ShaderProgram<TextShader>,
 }
 
 impl TextRendererSystem {
@@ -27,65 +27,54 @@ impl TextRendererSystem {
                 &[2, 2],
                 &mut MeshIndices::Triangles(vec![0, 1, 2, 2, 3, 0]),
             ),
-            shader,
+            shader_program: shader,
         }
     }
 }
 
 pub struct TextRenderer {
-    pub text: String,
-    pub font: Font,
+    text: String,
+    primitive: Primitive,
+    font: Font,
+}
+
+impl TextRenderer {
+    pub fn new(text: &str, font: Font) -> Self {
+        let mut primitive = Primitive::new(&[], &[2, 2], &mut MeshIndices::Triangles(vec![]));
+        font.render(text, &mut primitive);
+
+        TextRenderer {
+            text: String::from(text),
+            primitive,
+            font,
+        }
+    }
+
+    pub fn primitive(&self) -> &Primitive {
+        &self.primitive
+    }
 }
 
 impl TextRendererSystem {
     pub fn render(&mut self, entity_manager: &EntityManager, camera: &Camera) {
+        self.shader_program.bind();
         entity_manager.iter().for_each(
-            |(transform, text_renderer): (&Transform, &TextRenderer)| {
-                let mut position = Vec2::new(transform.position.x, transform.position.y);
+            |(transform, text_renderer): (&Transform, &TextRenderer)| unsafe {
+                let projection_view_model = camera.projection_view_mat() * transform.model();
+                let primitive = text_renderer.primitive();
 
-                text_renderer.text.bytes().for_each(|char| unsafe {
-                    let character = text_renderer.font.characters[char as usize];
-                    let (width, height) = (character.size.x, character.size.y);
-                    let (x_bearing, y_bearing) = (character.bearing.x, character.bearing.y);
+                self.shader_program.bind();
+                primitive.bind();
+                text_renderer.font.bind();
+                self.shader_program
+                    .bind_projection_view_model(&projection_view_model.to_cols_array());
 
-                    self.text_quad
-                        .reload(&[
-                            x_bearing,
-                            -y_bearing,
-                            0.,
-                            0.,
-                            x_bearing + width,
-                            -y_bearing,
-                            1.,
-                            0.,
-                            x_bearing + width,
-                            height - y_bearing,
-                            1.,
-                            1.,
-                            x_bearing,
-                            height - y_bearing,
-                            0.,
-                            1.,
-                        ])
-                        .unwrap();
-
-                    let pvm = camera.projection_view_mat()
-                        * transform.model()
-                        * glam::Mat4::from_translation(Vec3::new(position.x, position.y, 0.0));
-
-                    self.shader.load_projection_view_model(&pvm.to_cols_array());
-                    character.bind(&self.shader);
-
-                    position.x += (character.advance >> 6) as f32;
-                    self.text_quad.bind();
-
-                    gl::DrawElements(
-                        self.text_quad.primitive_type(),
-                        self.text_quad.count() as i32,
-                        gl::UNSIGNED_INT,
-                        ptr::null(),
-                    )
-                });
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    primitive.count() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
             },
         );
     }

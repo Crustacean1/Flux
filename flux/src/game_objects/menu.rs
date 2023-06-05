@@ -6,11 +6,10 @@ use atlas::{
     entity_manager::{EntityManager, EntityManagerTrait},
     event_bus::EventSenderTrait,
     game_root::GameError,
-    graphics::material::{TextureMaterial, UiMaterial},
     resource_manager::{
         resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager,
     },
-    scene::SceneEvent,
+    scene::SceneEvent, graphics::material::sprite_material::SpriteMaterial,
 };
 use glam::Vec3;
 
@@ -79,7 +78,7 @@ impl ButtonHandler for BackgroundHandler {
 fn add_menu_entry(
     pos: Vec3,
     component_manager: &mut EntityManager,
-    material: &Resource<UiMaterial>,
+    material: &Resource<SpriteMaterial>,
 ) {
     component_manager.add_entity((
         Transform::pos(pos),

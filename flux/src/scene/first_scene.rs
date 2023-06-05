@@ -3,16 +3,13 @@ use atlas::{
         camera::{Camera, Frustrum},
         controller::{CameraControllerSystem, Controller},
         mesh_renderer::MeshRendererSystem,
-        skybox_renderer::SkyboxSystem,
+        skybox_renderer::SkyboxRendererSystem,
         text_renderer::TextRendererSystem,
     },
-    entity_manager::{ComponentIteratorGenerator, EntityManager, EntityManagerTrait},
+    entity_manager::{EntityManager, EntityManagerTrait},
     event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
-    graphics::{
-        graphics_context::{ContextEvent, GraphicsContext},
-        shaders::{text_shader::TextShader, MeshShader, ShaderProgram, SkyboxShader},
-    },
+    graphics::graphics_context::{ContextEvent, GraphicsContext},
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
 };
@@ -24,10 +21,13 @@ use crate::game_objects::{
 
 pub struct FirstScene {
     cam_id: usize,
-    camera_controller_system: CameraControllerSystem,
     ui_camera: Camera,
     entity_manager: EntityManager,
-    text_system: TextRendererSystem,
+
+    camera_controller: CameraControllerSystem,
+    text_renderer: TextRendererSystem,
+    mesh_renderer: MeshRendererSystem,
+    skybox_renderer: SkyboxRendererSystem,
     event_reader: EventReader,
     event_sender: EventSender,
 }
@@ -38,9 +38,9 @@ impl Scene for FirstScene {
         graphics_context: &mut atlas::graphics::graphics_context::GraphicsContext,
     ) -> atlas::scene::SceneEvent {
         loop {
-            self.render();
+            self.render(graphics_context);
 
-            self.camera_controller_system
+            self.camera_controller
                 .read_inputs(&self.event_reader, &mut self.entity_manager);
 
             graphics_context.display();
@@ -59,8 +59,14 @@ impl FirstScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build("first")?;
 
-        let (camera_controller_system, text_system, event_sender, event_reader) =
-            Self::create_systems(&mut resource_manager)?;
+        let (
+            mesh_renderer,
+            skybox_renderer,
+            camera_controller,
+            text_renderer,
+            event_sender,
+            event_reader,
+        ) = Self::create_systems(&mut resource_manager)?;
 
         let (width, height) = graphics_context.dimensions();
 
@@ -73,20 +79,22 @@ impl FirstScene {
             Vec3::new(0.0, 0.0, -1.0),
         );
 
-        let camera_controller = Box::new(UserCameraController::new()) as Box<dyn Controller>;
-        let cam_id = entity_manager.add_entity((camera_controller, camera));
+        let controller = Box::new(UserCameraController::new()) as Box<dyn Controller>;
+        let cam_id = entity_manager.add_entity((controller, camera));
         let ui_camera = Camera::new_ortho(Frustrum::ui_frustrum(width as f32, height as f32));
 
         graphics_context.cursor_lock(true);
 
         Ok(Box::new(FirstScene {
-            camera_controller_system,
             ui_camera,
-            text_system,
-            event_reader,
-            event_sender,
             entity_manager,
             cam_id,
+            mesh_renderer,
+            skybox_renderer,
+            text_renderer,
+            camera_controller,
+            event_sender,
+            event_reader,
         }))
     }
 
@@ -111,6 +119,8 @@ impl FirstScene {
         resource_manager: &mut SceneResourceManager,
     ) -> Result<
         (
+            MeshRendererSystem,
+            SkyboxRendererSystem,
             CameraControllerSystem,
             TextRendererSystem,
             EventSender,
@@ -118,8 +128,12 @@ impl FirstScene {
         ),
         GameError,
     > {
-        let text_shader: ShaderProgram<TextShader> = resource_manager.get("basic").res;
+        let text_shader = resource_manager.get("basic").res;
+        let phong_shader = resource_manager.get("phong").res;
+        let skybox_shader = resource_manager.get("basic").res;
 
+        let mesh_renderer = MeshRendererSystem::new(phong_shader);
+        let skybox_renderer = SkyboxRendererSystem::new(skybox_shader);
         let camera_controller_system = CameraControllerSystem::new();
         let text_system = TextRendererSystem::new(text_shader);
 
@@ -127,6 +141,8 @@ impl FirstScene {
         let event_reader = EventReader::new();
 
         Ok((
+            mesh_renderer,
+            skybox_renderer,
             camera_controller_system,
             text_system,
             event_sender,
@@ -134,12 +150,14 @@ impl FirstScene {
         ))
     }
 
-    fn render(&mut self) {
+    fn render(&mut self, context: &mut GraphicsContext) {
         if let Some(camera) = self.entity_manager.get_camera(self.cam_id) {
-            //self.skybox_system
-            //.render(camera, self.entity_manager.iter());
-            self.text_system
+            context.depth_write(false);
+            self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);
+            //self.skybox_renderer.render(camera, &self.entity_manager);
+            context.depth_write(true);
+            //self.mesh_renderer.render(&self.entity_manager, camera);
         }
     }
 }

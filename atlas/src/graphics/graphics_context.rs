@@ -152,6 +152,15 @@ impl GraphicsContext {
         }
     }
 
+    pub fn depth_write(&self, enabled: bool) {
+        unsafe {
+            match enabled {
+                true => gl::DepthMask(gl::TRUE),
+                false => gl::DepthMask(gl::FALSE),
+            }
+        }
+    }
+
     pub fn set_viewport(&self, width: i32, height: i32) {
         unsafe {
             gl::Viewport(0, 0, width, height);

@@ -3,7 +3,8 @@ use std::{fmt, rc::Rc};
 use crate::{
     graphics::graphics_context::GraphicsContext,
     logger::{console_logger::ConsoleLogger, Logger},
-    scene::{Scene, SceneEvent}, resource_manager::scene_manager::SceneManager,
+    resource_manager::scene_manager::SceneManager,
+    scene::{Scene, SceneEvent},
 };
 
 #[derive(Debug, Clone)]
@@ -16,6 +17,10 @@ impl GameError {
         GameError {
             msg: String::from(msg),
         }
+    }
+
+    pub fn err<T>(msg: String) -> Result<T, Self> {
+        Err(GameError { msg })
     }
 }
 
@@ -36,7 +41,7 @@ impl GameRoot {
     pub fn new(title: &str) -> Result<Self, GameError> {
         let logger = Rc::new(ConsoleLogger::new());
         let graphics_context = GraphicsContext::new(title)?;
-        let scene_manager = SceneManager::new(logger.clone())?;
+        let scene_manager = SceneManager::new()?;
 
         Ok(GameRoot {
             logger,

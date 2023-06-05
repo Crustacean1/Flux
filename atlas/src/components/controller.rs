@@ -3,7 +3,7 @@ use std::mem;
 use glam::Vec3;
 
 use crate::{
-    entity_manager::{ComponentMutIteratorGenerator, EntityManager, EntityManagerTrait},
+    entity_manager::{ComponentMutIteratorGenerator, EntityManager},
     event_bus::{EventReader, EventReaderTrait},
     graphics::graphics_context::IoEvent,
 };

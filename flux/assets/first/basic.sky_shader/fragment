@@ -3,11 +3,10 @@
 in vec2 vTex;
 out vec4 fCol;
 
-uniform sampler2D mat_texture;
+uniform sampler2D billboard;
 
 void main(){
-    fCol = texture(mat_texture, vTex);
-    //fCol = vec4(vTex, 0.0,1.0);
+    fCol = texture(billboard, vTex);
 }
 
 

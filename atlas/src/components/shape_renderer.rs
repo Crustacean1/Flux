@@ -3,11 +3,11 @@ use std::ptr;
 use glad_gl::gl;
 
 use crate::{
-    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     graphics::{
-        material::{Material, UiMaterial},
+        material::{sprite_material::SpriteMaterial, Material},
         primitive::Primitive,
-        shaders::{ShaderProgram, UiShader},
+        shaders::{ui_shader::SpriteShader, ShaderProgram},
     },
 };
 
@@ -15,11 +15,11 @@ use super::{camera::Camera, transform::Transform};
 
 pub struct ShapeRenderer {
     mesh: Primitive,
-    material: UiMaterial,
+    material: SpriteMaterial,
 }
 
 impl ShapeRenderer {
-    pub fn quad((width, height): (f32, f32), material: UiMaterial) -> ShapeRenderer {
+    pub fn quad((width, height): (f32, f32), material: SpriteMaterial) -> ShapeRenderer {
         ShapeRenderer {
             mesh: Primitive::quad(width, height),
             material,
@@ -28,11 +28,11 @@ impl ShapeRenderer {
 }
 
 pub struct ShapeRendererSystem {
-    shader: ShaderProgram<UiShader>,
+    shader: ShaderProgram<SpriteShader>,
 }
 
 impl ShapeRendererSystem {
-    pub fn new(shader: ShaderProgram<UiShader>) -> Self {
+    pub fn new(shader: ShaderProgram<SpriteShader>) -> Self {
         ShapeRendererSystem { shader }
     }
 }
@@ -44,10 +44,11 @@ impl ShapeRendererSystem {
             entity_manager
                 .iter()
                 .for_each(|(transform, shape): (&Transform, &ShapeRenderer)| {
-                    let mvp = vp * transform.model();
-                    self.shader.load_projection_view_model(&mvp.to_cols_array());
-                    shape.material.bind(&self.shader);
+                    shape.material.bind();
                     shape.mesh.bind();
+
+                    let mvp = vp * transform.model();
+                    self.shader.bind_projection_view_model(&mvp.to_cols_array());
 
                     gl::DrawElements(
                         shape.mesh.primitive_type(),

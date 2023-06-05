@@ -1,12 +1,8 @@
 use std::ptr;
 
-use glad_gl::gl::{self, PrimitiveRestartIndex};
+use glad_gl::gl;
 
-use super::{
-    material::{Material, TextureMaterial},
-    primitive::Primitive,
-    shaders::ShaderProgram,
-};
+use super::{material::Material, primitive::Primitive, shaders::ShaderProgram};
 
 #[derive(Clone)]
 pub struct Mesh<Q: Clone, T: Material<Shader = Q>> {
@@ -19,7 +15,7 @@ impl<Q: Clone, T: Material<Shader = Q>> Mesh<Q, T> {
             .iter()
             .for_each(|(material, primitive)| unsafe {
                 primitive.bind();
-                //material.bind(&shader);
+                //material.bind();
                 gl::DrawElements(
                     primitive.primitive_type(),
                     primitive.count() as i32,

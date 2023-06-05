@@ -8,10 +8,12 @@ mod text_renderer;
 use crate::{
     components::{
         button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
-        controller::Controller, mesh_renderer::MeshRenderer, shape_renderer::ShapeRenderer,
-        skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer, transform::Transform,
+        controller::Controller, shape_renderer::ShapeRenderer, skybox_renderer::SkyboxRenderer,
+        text_renderer::TextRenderer, transform::Transform,
     },
-    graphics::{lights::Light, material::TextureMaterial, mesh::Mesh, shaders::MeshShader},
+    graphics::{
+        lights::Light,  mesh::Mesh, shaders::mesh_shader::MeshShader, material::phong_material::PhongMaterial,
+    },
 };
 
 pub type ComponentIterator<T> = Box<dyn Iterator<Item = T>>;
@@ -47,7 +49,7 @@ pub struct EntityManager {
     meshes: (
         Vec<usize>,
         Vec<Transform>,
-        Vec<Mesh<MeshShader, TextureMaterial>>,
+        Vec<Mesh<MeshShader, PhongMaterial>>,
     ),
     lights: (Vec<usize>, Vec<Transform>, Vec<Light>),
     text_renderers: (Vec<usize>, Vec<Transform>, Vec<TextRenderer>),
@@ -130,7 +132,7 @@ impl<'a>
         'a,
         (
             (usize, &'a Transform),
-            &'a Mesh<MeshShader, TextureMaterial>,
+            &'a Mesh<MeshShader, PhongMaterial>,
         ),
     > for EntityManager
 {
@@ -140,7 +142,7 @@ impl<'a>
         dyn Iterator<
                 Item = (
                     (usize, &'a Transform),
-                    &'a Mesh<MeshShader, TextureMaterial>,
+                    &'a Mesh<MeshShader, PhongMaterial>,
                 ),
             > + 'a,
     > {

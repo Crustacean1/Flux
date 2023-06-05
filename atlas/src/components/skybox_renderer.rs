@@ -1,64 +1,65 @@
-use std::{ffi::c_void, mem::size_of, ptr};
+use std::{ffi::c_void, mem::size_of};
 
 use glad_gl::gl;
 
-use crate::graphics::{
-    material::{Material, TextureMaterial},
-    primitive::Primitive,
-    shaders::{ShaderProgram, SkyboxShader},
+use crate::{
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
+    graphics::{
+        material::{skybox_material::SkyboxMaterial, Material},
+        primitive::Primitive,
+        shaders::{skybox_shader::SkyboxShader, ShaderProgram},
+    },
 };
 
 use super::camera::Camera;
 
 pub struct SkyboxRenderer {
-    textures: [TextureMaterial; 6],
+    material: SkyboxMaterial,
     mesh: Primitive,
 }
 
-pub struct SkyboxSystem {
+pub struct SkyboxRendererSystem {
     shader: ShaderProgram<SkyboxShader>,
 }
 
 impl SkyboxRenderer {
-    pub fn new(size: f32, textures: &[TextureMaterial]) -> Self {
+    pub fn new(size: f32, material: SkyboxMaterial) -> Self {
         let mesh = Primitive::skybox(size);
-        SkyboxRenderer {
-            mesh,
-            textures: [
-                textures[0].clone(),
-                textures[1].clone(),
-                textures[2].clone(),
-                textures[3].clone(),
-                textures[4].clone(),
-                textures[5].clone(),
-            ],
-        }
+
+        SkyboxRenderer { mesh, material }
     }
 }
 
-impl SkyboxSystem {
-    pub fn render<'a>(&self, camera: &Camera, skyboxes: &[(usize, *const SkyboxRenderer)]) {
+impl SkyboxRendererSystem {
+    pub fn render<'a>(&self, camera: &Camera, entity_manager: &EntityManager) {
         unsafe {
-            /*skyboxes.iter().take(1).for_each(|(_, skybox)| {
-                let skybox = &**skybox;
+            self.shader.bind();
+            entity_manager
+                .iter()
+                .take(1)
+                .for_each(|(_, skybox): (usize, &SkyboxRenderer)| {
+                    skybox.mesh.bind();
+                    skybox.material.bind();
 
-                skybox.mesh.bind();
-                skybox.textures.iter().enumerate().for_each(|(i, texture)| {
-                    let pv = camera.static_projection_view_mat();
-                    self.shader.load_mvp(&pv.to_cols_array());
-                    texture.bind(&self.shader);
-                    gl::DrawElements(
-                        skybox.mesh.primitive_type(),
-                        6,
-                        gl::UNSIGNED_INT,
-                        (i * 6 * size_of::<u32>()) as *const c_void,
-                    );
+                    let projection_view = camera.static_projection_view_mat();
+                    self.shader
+                        .bind_projection_view(&projection_view.to_cols_array());
+
+                    (0..6).for_each(|i| {
+                        self.shader.bind_billboard(i as i32);
+
+                        gl::DrawElements(
+                            skybox.mesh.primitive_type(),
+                            6,
+                            gl::UNSIGNED_INT,
+                            (i * 6 * size_of::<u32>()) as *const c_void,
+                        );
+                    });
                 });
-            });*/
         }
     }
 
     pub fn new(shader: ShaderProgram<SkyboxShader>) -> Self {
-        SkyboxSystem { shader }
+        SkyboxRendererSystem { shader }
     }
 }

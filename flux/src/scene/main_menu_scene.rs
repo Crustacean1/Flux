@@ -11,7 +11,7 @@ use atlas::{
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::{ShaderProgram, UiShader},
+        shaders::{ShaderProgram, ui_shader::SpriteShader},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
@@ -91,7 +91,7 @@ impl MainMenuScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build("main")?;
 
-        let ui_shader: ShaderProgram<UiShader> = resource_manager.get("basic_ui").res;
+        let ui_shader: ShaderProgram<SpriteShader> = resource_manager.get("basic_ui").res;
         let shape_rendering_system = ShapeRendererSystem::new(ui_shader);
 
         create_main_menu(

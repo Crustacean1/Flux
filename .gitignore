@@ -1,1 +1,7 @@
 /target
+*.gltf
+*.glb
+*.jpg
+*.jpeg
+*.png
+

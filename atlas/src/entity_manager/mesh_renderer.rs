@@ -1,14 +1,16 @@
 use crate::{
     components::transform::Transform,
-    graphics::{material::TextureMaterial, mesh::Mesh, shaders::MeshShader},
+    graphics::{
+        material::phong_material::PhongMaterial, mesh::Mesh, shaders::mesh_shader::MeshShader,
+    },
 };
 
-use super::{ComponentIteratorGenerator, EntityManager, EntityManagerTrait};
+use super::{EntityManager, EntityManagerTrait};
 
-impl EntityManagerTrait<(Transform, Mesh<MeshShader, TextureMaterial>)> for EntityManager {
+impl EntityManagerTrait<(Transform, Mesh<MeshShader, PhongMaterial>)> for EntityManager {
     fn add_entity(
         &mut self,
-        (transform, mesh_renderer): (Transform, Mesh<MeshShader, TextureMaterial>),
+        (transform, mesh_renderer): (Transform, Mesh<MeshShader, PhongMaterial>),
     ) -> usize {
         let entity_id = self.next_entity_id;
         self.next_entity_id += 1;
@@ -20,8 +22,7 @@ impl EntityManagerTrait<(Transform, Mesh<MeshShader, TextureMaterial>)> for Enti
         entity_id
     }
 
-    fn remove_entity(&mut self, entity: usize) {
+    fn remove_entity(&mut self, _entity: usize) {
         todo!()
     }
 }
-

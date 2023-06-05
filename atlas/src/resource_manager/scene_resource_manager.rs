@@ -11,7 +11,7 @@ use crate::game_root::GameError;
 
 use super::{
     font::load_font, indexer::index_resources, mesh::load_mesh, resource::Resource,
-    shader::load_shader, texture::load_mat, ResourceManager,
+    shader::load_shader, material::load_mat, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -114,12 +114,18 @@ impl<T: Default + Clone + 'static> ResourceManager<T> for SceneResourceManager {
                 }
             })
             .expect(&format!(
-                "Resource type not found: '{}'",
+                "Resource not found: '{}' : '{}'",
+                res_id,
                 any::type_name::<T>()
             ))
     }
 
     fn register(&mut self, res_id: &str, resource: T) {
+        println!(
+            "Registering resource '{}' : '{}'",
+            res_id,
+            any::type_name::<T>()
+        );
         if self
             .resources
             .iter_mut()
