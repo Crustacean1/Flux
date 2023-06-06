@@ -23,7 +23,7 @@ pub fn asteroids(
     let skybox_material: SkyboxMaterial = resource_manager.get("space1").res;
     let skybox = SkyboxRenderer::new(1.0, skybox_material);
 
-    let meshes = ["spaceship1", "spaceship2", "spaceship3"];
+    let meshes = ["spaceship1"];
 
     let meshes: Vec<Mesh<MeshShader, PhongMaterial>> = meshes
         .iter()
@@ -61,11 +61,14 @@ pub fn asteroids(
 
     entity_manager.add_entity((
         Transform {
-            position: Vec3::new(500., 500., 0.),
+            position: Vec3::new(50., 50., 0.),
             scale: Vec3::new(1., 1., 1.),
             rotation: Vec3::new(0.0, 0.0, 0.0),
         },
-        TextRenderer::new("ABCDEFGHIJKLMNOPRSTUWQ123456", font),
+        TextRenderer::new(
+            "Velocity: 18.31 [m/s]",
+            font,
+        ),
     ));
 
     entity_manager.add_entity(skybox);

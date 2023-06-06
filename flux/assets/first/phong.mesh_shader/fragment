@@ -43,11 +43,12 @@ vec3 cast_light(Material material, DirectionalLight light){
 uniform Material material;
 
 uniform DirectionalLight directional_lights[4];
-uniform unsigned int directional_light_count = 0;
+uniform int directional_light_count = 0;
 
 void main() {
     fCol = vec4(0,0,0,1);
     for(int i = 0; i< directional_light_count; ++i) {
         fCol += vec4(cast_light(material, directional_lights[i]), 0);
     }
+    fCol += vec4(0,1,0,0);
 }

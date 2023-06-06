@@ -145,7 +145,7 @@ impl ShaderProgram<MeshShader> {
 
     pub fn bind_directional_light_count(&mut self, count: u32) {
         unsafe {
-            gl::Uniform1ui(self.shader.directional_light_count_uniform, count);
+            gl::Uniform1i(self.shader.directional_light_count_uniform, count as i32);
         }
     }
 }

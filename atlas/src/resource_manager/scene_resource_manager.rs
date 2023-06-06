@@ -10,8 +10,8 @@ use freetype::Library;
 use crate::game_root::GameError;
 
 use super::{
-    font::load_font, indexer::index_resources, mesh::load_mesh, resource::Resource,
-    shader::load_shader, material::load_mat, ResourceManager,
+    font::load_font, indexer::index_resources, material::load_mat, mesh::load_mesh,
+    resource::Resource, shader::load_shader, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -20,7 +20,7 @@ pub enum LazyResource<T> {
 }
 
 trait ResourceCollectionTrait<T: Default + Clone> {
-    fn get(&mut self, res_id: &str) -> Resource<T>;
+    fn get(&mut self, res_id: &str) -> Option<&T>;
     fn add(&mut self, res_id: &str, resource: &T);
 }
 
@@ -39,14 +39,8 @@ impl<T: Default + Clone> ResourceCollection<T> {
 }
 
 impl<T: Default + Clone> ResourceCollectionTrait<T> for ResourceCollection<T> {
-    fn get(&mut self, res_id: &str) -> Resource<T> {
-        match self.resources.get(res_id) {
-            Some(resource) => Resource::new(res_id, resource),
-            _ => {
-                println!("Resource: '{}' not found, using default", res_id);
-                Resource::new("<MISSING>", &T::default())
-            }
-        }
+    fn get(&mut self, res_id: &str) -> Option<&T> {
+        self.resources.get(res_id)
     }
 
     fn add(&mut self, res_id: &str, resource: &T) {
@@ -104,20 +98,23 @@ impl SceneResourceManager {
 
 impl<T: Default + Clone + 'static> ResourceManager<T> for SceneResourceManager {
     fn get(&mut self, res_id: &str) -> Resource<T> {
-        self.resources
+        let resource: T = self
+            .resources
             .iter_mut()
             .find_map(|resources| {
-                if let Some(resources) = resources.downcast_mut::<ResourceCollection<T>>() {
-                    Some(resources.get(res_id))
-                } else {
-                    None
-                }
+                Some(
+                    resources
+                        .downcast_mut::<ResourceCollection<T>>()?
+                        .get(res_id)?
+                        .clone(),
+                )
             })
-            .expect(&format!(
-                "Resource not found: '{}' : '{}'",
-                res_id,
-                any::type_name::<T>()
-            ))
+            .unwrap_or_else(|| {
+                println!("Resource: '{}' not found", res_id);
+                T::default()
+            });
+
+        Resource::new(res_id, resource)
     }
 
     fn register(&mut self, res_id: &str, resource: T) {

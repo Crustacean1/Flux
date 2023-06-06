@@ -242,6 +242,6 @@ impl Primitive {
             .flatten()
             .collect();
 
-        Self::new(&vertices, &[3, 2], &mut MeshIndices::Triangles(indices))
+        Self::new(&vertices, &[3, 2], &mut MeshIndices::Points(indices))
     }
 }

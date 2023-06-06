@@ -28,7 +28,7 @@ impl<Q: Clone, T: Material<Shader = Q>> Mesh<Q, T> {
 
 impl<Q: Clone, T: Material<Shader = Q> + Default> Default for Mesh<Q, T> {
     fn default() -> Self {
-        let primitive = Primitive::sphere(1.0, 10);
+        let primitive = Primitive::sphere(1.0, 100);
         let mat = T::default();
         return Mesh {
             primitives: vec![(mat, primitive)],

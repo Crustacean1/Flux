@@ -60,17 +60,16 @@ impl TextRendererSystem {
         self.shader_program.bind();
         entity_manager.iter().for_each(
             |(transform, text_renderer): (&Transform, &TextRenderer)| unsafe {
-                let projection_view_model = camera.projection_view_mat() * transform.model();
+                let projection_view_model = camera.projection_mat() * transform.model();
                 let primitive = text_renderer.primitive();
 
-                self.shader_program.bind();
                 primitive.bind();
                 text_renderer.font.bind();
                 self.shader_program
                     .bind_projection_view_model(&projection_view_model.to_cols_array());
 
                 gl::DrawElements(
-                    gl::TRIANGLES,
+                    primitive.primitive_type(),
                     primitive.count() as i32,
                     gl::UNSIGNED_INT,
                     ptr::null(),

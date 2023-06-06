@@ -15,9 +15,7 @@ use atlas::{
 };
 use glam::Vec3;
 
-use crate::game_objects::{
-    asteroids::asteroids, camera_controller::UserCameraController, skybox::skybox,
-};
+use crate::game_objects::{asteroids::asteroids, camera_controller::UserCameraController};
 
 pub struct FirstScene {
     cam_id: usize,
@@ -70,7 +68,6 @@ impl FirstScene {
 
         let (width, height) = graphics_context.dimensions();
 
-        skybox(&mut entity_manager, &mut resource_manager);
         asteroids(&mut entity_manager, &mut resource_manager)?;
 
         let camera = Camera::new_persp(
@@ -153,11 +150,11 @@ impl FirstScene {
     fn render(&mut self, context: &mut GraphicsContext) {
         if let Some(camera) = self.entity_manager.get_camera(self.cam_id) {
             context.depth_write(false);
+            self.skybox_renderer.render(camera, &self.entity_manager);
+            context.depth_write(true);
+            self.mesh_renderer.render(&self.entity_manager, camera);
             self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);
-            //self.skybox_renderer.render(camera, &self.entity_manager);
-            context.depth_write(true);
-            //self.mesh_renderer.render(&self.entity_manager, camera);
         }
     }
 }

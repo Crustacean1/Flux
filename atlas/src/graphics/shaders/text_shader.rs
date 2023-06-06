@@ -1,8 +1,4 @@
-use std::mem;
-
-use glad_gl::gl;
-
-use crate::{game_root::GameError, graphics::texture::Texture};
+use crate::game_root::GameError;
 
 use super::{Shader, ShaderProgram};
 
@@ -12,22 +8,6 @@ pub struct TextShader {
 }
 
 impl ShaderProgram<TextShader> {
-    pub fn load_character(&self) {
-        unsafe {
-            gl::UseProgram(self.shader_id);
-            let mat_texture =
-                gl::GetUniformLocation(self.shader_id, mem::transmute("character\0".as_ptr()));
-            match mat_texture {
-                -1 => {
-                    println!("Failed to load uniform: 'character'");
-                }
-                _ => {
-                    gl::Uniform1i(mat_texture, 0);
-                }
-            }
-        }
-    }
-
     pub fn bind_projection_view_model(&mut self, projection_view_model: &[f32; 16]) {
         Self::load_mat(
             &self,

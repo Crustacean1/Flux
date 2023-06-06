@@ -5,10 +5,10 @@ pub struct Resource<T: Clone> {
 }
 
 impl<T: Clone> Resource<T> {
-    pub fn new(id: &str, res: &T) -> Self {
+    pub fn new(id: &str, res: T) -> Self {
         Resource::<T> {
             id: String::from(id),
-            res: res.clone(),
+            res,
         }
     }
 

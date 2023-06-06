@@ -73,24 +73,21 @@ impl Shapely for Vertex3PT {
     }
 
     fn sphere(radius: f32, detail: u32) -> Vec<Self::Attribute> {
-        (0..detail)
+        let phi = (1.0 + (5.0 as f32).sqrt()) * 0.5;
+        (0..(detail * detail))
             .map(|i| {
-                (0..detail).map(move |j| {
-                    let (x_angle, y_angle) = (
-                        2.0 * PI * i as f32 / (detail - 1) as f32,
-                        PI * j as f32 / (detail - 1) as f32 - PI * 0.5,
-                    );
-                    Vertex3PT {
-                        pos: [
-                            radius * y_angle.cos() * x_angle.cos(),
-                            radius * y_angle.sin(),
-                            radius * y_angle.cos() * x_angle.sin(),
-                        ],
-                        tex: [i as f32 / detail as f32, j as f32 / detail as f32],
-                    }
-                })
+                let y = i as f32* 0.5 / (detail * detail) as f32;
+                let x = i as f32 * 0.5 / phi;
+                let x = x - (x / 2.0) as i32 as f32 * 2.0;
+                //let x = i as f32 * 0.02;
+                let radius = (y).sqrt();
+                let angle = 2.0 * PI * x * phi;
+                Self {
+                    pos: [angle.cos() * radius, angle.sin() * radius, 0.0],
+                    //pos: [x, y , 0.0],
+                    tex: [0.0, 0.0],
+                }
             })
-            .flatten()
             .collect()
     }
 

@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use freetype::{face::LoadFlag, Library};
+use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
@@ -15,14 +16,15 @@ use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
 #[derive(Clone, Copy)]
 pub struct Character {
     pub size: (usize, usize),
-    pub bearing: (usize, usize),
-    pub advance: u32,
+    pub bearing: (i32, i32),
+    pub advance: usize,
 }
 
 #[derive(Clone)]
 pub struct Font {
     pub characters: [Character; 128],
     pub texture: Texture,
+    texture_size: (usize, usize),
 }
 
 impl Default for Font {
@@ -38,11 +40,24 @@ impl Font {
             .bytes()
             .filter_map(|char| {
                 let glyph = self.characters.get(char as usize)?;
+                let (width, height) = self.texture_size;
+                let (rows, columns) = (8, 16);
+                let (column, row) = (char % columns, char / columns);
+
+                if char == 106 {
+                    println!(
+                        "Size: {} {} pos: {} {} bearing: {} {}",
+                        glyph.size.0, glyph.size.1, x, y, glyph.bearing.0, glyph.bearing.1
+                    );
+                }
 
                 let (x1, y1) = (x + glyph.bearing.0 as f32, y - glyph.bearing.1 as f32);
                 let (x2, y2) = (x1 + glyph.size.0 as f32, y1 + glyph.size.1 as f32);
-                let (u1, v1) = ((char % 16) as f32 / 16.0, (char as f32 / 16.0) / 8.0);
-                let (u2, v2) = (u1 + 1.0 / 16.0, v1 + 1.0 / 8.0);
+                let (u1, v1) = (column as f32 / columns as f32, row as f32 / rows as f32);
+                let (u2, v2) = (
+                    u1 + (glyph.size.0 as f32 / width as f32),
+                    v1 + (glyph.size.1 as f32 / height as f32),
+                );
 
                 x += (glyph.advance >> 6) as f32;
 
@@ -56,8 +71,6 @@ impl Font {
             .flatten()
             .flatten()
             .collect();
-
-        println!("Vertices: {:?}", char_quads);
 
         let char_quads_indices: Vec<_> = text
             .bytes()
@@ -76,14 +89,15 @@ impl Font {
             .flatten()
             .collect();
 
-        println!("Indices: {:?}", char_quads_indices);
-
         target.reload_vertices(&char_quads);
         target.reload_indices(&char_quads_indices);
     }
 
     pub fn bind(&self) {
-        self.texture.bind()
+        unsafe { 
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.texture.bind() 
+        }
     }
 }
 
@@ -127,15 +141,16 @@ fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameEr
                 .map(|_| {
                     let bitmap = Vec::from(face.glyph().bitmap().buffer());
 
-                    let advance = face.glyph().advance().x as u32;
+                    let advance = face.glyph().advance().x as usize;
                     let size = (
                         face.glyph().bitmap().width() as usize,
                         face.glyph().bitmap().rows() as usize,
                     );
                     let bearing = (
-                        face.glyph().bitmap_left() as usize,
-                        face.glyph().bitmap_top() as usize,
+                        face.glyph().bitmap_left() as i32,
+                        face.glyph().bitmap_top() as i32,
                     );
+
                     (
                         Character {
                             advance,
@@ -194,6 +209,7 @@ fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameEr
             .try_into()
             .map_err(|e| GameError::new(&format!("Failed to read characters")))?,
         texture,
+        texture_size: (width, height),
     })
 }
 
