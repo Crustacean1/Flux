@@ -4,18 +4,19 @@ use atlas::{
     components::{
         button_trigger::ButtonTriggerSystem,
         camera::{Camera, Frustrum},
-        shape_renderer::ShapeRendererSystem,
+        shape_renderer::SpriteRendererSystem,
     },
-    entity_manager::{ComponentIteratorGenerator, EntityManager},
+    entity_manager::EntityManager,
     event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::{ShaderProgram, ui_shader::SpriteShader},
+        shaders::{ui_shader::SpriteShader, ShaderProgram},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
 };
+use glam::Vec3;
 
 use crate::game_objects::menu::create_main_menu;
 
@@ -23,7 +24,7 @@ pub struct MainMenuScene {
     camera: Camera,
     entity_manager: EntityManager,
     resource_manager: SceneResourceManager,
-    shape_rendering_system: ShapeRendererSystem,
+    shape_rendering_system: SpriteRendererSystem,
     button_system: ButtonTriggerSystem,
 
     event_sender: EventSender,
@@ -69,8 +70,8 @@ impl MainMenuScene {
             .for_each(|event| match event {
                 ContextEvent::Resized(width, height) => {
                     graphics_context.set_viewport(*width, *height);
-                    self.camera
-                        .ortho(Frustrum::ui_frustrum(*width as f32, *height as f32));
+                    /*self.camera
+                    .new(Frustrum::orthogonal(*width as f32, *height as f32));*/
                 }
                 _ => {}
             })
@@ -92,7 +93,7 @@ impl MainMenuScene {
         let mut resource_manager = SceneResourceManager::build("main")?;
 
         let ui_shader: ShaderProgram<SpriteShader> = resource_manager.get("basic_ui").res;
-        let shape_rendering_system = ShapeRendererSystem::new(ui_shader);
+        let shape_rendering_system = SpriteRendererSystem::new(ui_shader);
 
         create_main_menu(
             &mut entity_manager,
@@ -103,7 +104,10 @@ impl MainMenuScene {
         let (width, height) = graphics_context.dimensions();
 
         let main_scene = MainMenuScene {
-            camera: Camera::new_ortho(Frustrum::ui_frustrum(width as f32, height as f32)),
+            camera: Camera::new(
+                Frustrum::orthogonal(width as f32, height as f32),
+                Vec3::new(0.0, 0.0, 0.0),
+            ),
             entity_manager,
             resource_manager,
             shape_rendering_system,

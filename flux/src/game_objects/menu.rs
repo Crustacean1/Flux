@@ -1,7 +1,7 @@
 use atlas::{
     components::{
         button_handler::ButtonHandler, button_trigger::ButtonTrigger,
-        shape_renderer::ShapeRenderer, transform::Transform,
+        shape_renderer::SpriteRenderer, transform::Transform,
     },
     entity_manager::{EntityManager, EntityManagerTrait},
     event_bus::EventSenderTrait,
@@ -36,13 +36,13 @@ pub fn create_main_menu(
             );
         });
 
-    let main_screen = resource_manager.get("main_menu");
-    component_manager.add_entity((
+    //let main_screen = resource_manager.get("main_menu");
+    /*component_manager.add_entity((
         Transform::pos(Vec3::new(width as f32 * 0.5, height as f32 * 0.5, 0.0)),
-        ShapeRenderer::quad((width as f32 * 0.5, height as f32 * 0.5), main_screen.res),
+        SpriteRenderer::quad((width as f32 * 0.5, height as f32 * 0.5), main_screen.res),
         ButtonTrigger::new(0, (0.0, 0.0), (width as f32, height as f32)),
         Box::new(BackgroundHandler::new()) as Box<dyn ButtonHandler>,
-    ));
+    ));*/
 
     Ok(())
 }
@@ -80,10 +80,10 @@ fn add_menu_entry(
     component_manager: &mut EntityManager,
     material: &Resource<SpriteMaterial>,
 ) {
-    component_manager.add_entity((
+    /*component_manager.add_entity((
         Transform::pos(pos),
-        ShapeRenderer::quad((128.0, 32.0), material.res.clone()),
+        SpriteRenderer::quad((128.0, 32.0), material.res.clone()),
         ButtonTrigger::new(1, (pos.x, pos.y), (128.0, 32.0)),
         Box::new(PlayHandler::new()) as Box<dyn ButtonHandler>,
-    ));
+    ));*/
 }

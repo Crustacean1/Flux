@@ -2,20 +2,24 @@ use std::ptr;
 
 use glad_gl::gl;
 
-use super::{material::Material, primitive::Primitive, shaders::ShaderProgram};
+use super::{
+    material::Material,
+    primitive::Primitive,
+    shaders::ShaderProgram,
+    vertices::layouts::{BufferElement, IndexGeometry},
+};
 
 #[derive(Clone)]
-pub struct Mesh<Q: Clone, T: Material<Shader = Q>> {
-    pub primitives: Vec<(T, Primitive)>,
+pub struct Mesh<Vertex: BufferElement, Geometry: IndexGeometry, Material> {
+    pub primitives: Vec<(Material, Primitive<Vertex, Geometry>)>,
 }
 
-impl<Q: Clone, T: Material<Shader = Q>> Mesh<Q, T> {
-    pub fn render(&self, shader: &ShaderProgram<Q>) {
+impl<Vertex: BufferElement, Geometry: IndexGeometry, Material> Mesh<Vertex, Geometry, Material> {
+    pub fn render<Q: Clone>(&self, shader: &ShaderProgram<Q>) {
         self.primitives
             .iter()
             .for_each(|(material, primitive)| unsafe {
                 primitive.bind();
-                //material.bind();
                 gl::DrawElements(
                     primitive.primitive_type(),
                     primitive.count() as i32,
@@ -26,10 +30,12 @@ impl<Q: Clone, T: Material<Shader = Q>> Mesh<Q, T> {
     }
 }
 
-impl<Q: Clone, T: Material<Shader = Q> + Default> Default for Mesh<Q, T> {
+impl<Vertex: BufferElement, Geometry: IndexGeometry, Material: Default> Default
+    for Mesh<Vertex, Geometry, Material>
+{
     fn default() -> Self {
-        let primitive = Primitive::sphere(1.0, 100);
-        let mat = T::default();
+        let primitive = Primitive::sphere(1.0, 5);
+        let mat = Material::default();
         return Mesh {
             primitives: vec![(mat, primitive)],
         };

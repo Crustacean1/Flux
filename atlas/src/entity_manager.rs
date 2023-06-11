@@ -1,20 +1,6 @@
-mod controller;
-mod light;
-mod menu_button;
-mod mesh_renderer;
-mod skybox;
-mod text_renderer;
+use std::any::Any;
 
-use crate::{
-    components::{
-        button_handler::ButtonHandler, button_trigger::ButtonTrigger, camera::Camera,
-        controller::Controller, shape_renderer::ShapeRenderer, skybox_renderer::SkyboxRenderer,
-        text_renderer::TextRenderer, transform::Transform,
-    },
-    graphics::{
-        lights::Light,  mesh::Mesh, shaders::mesh_shader::MeshShader, material::phong_material::PhongMaterial,
-    },
-};
+use crate::{components::transform::Transform, game_entities::GameEntity};
 
 pub type ComponentIterator<T> = Box<dyn Iterator<Item = T>>;
 
@@ -24,11 +10,11 @@ pub enum ComponentEvent<T> {
 }
 
 pub trait ComponentIteratorGenerator<'a, T> {
-    fn iter(&'a self) -> Box<dyn Iterator<Item = T> + 'a>;
+    fn get_view(&'a self) -> Box<dyn Iterator<Item = T> + 'a>;
 }
 
 pub trait ComponentMutIteratorGenerator<'a, T> {
-    fn iter(&'a mut self) -> Box<dyn Iterator<Item = T> + 'a>;
+    fn get_mut_view(&'a mut self) -> Box<dyn Iterator<Item = T> + 'a>;
 }
 
 pub trait EntityManagerTrait<T> {
@@ -37,134 +23,64 @@ pub trait EntityManagerTrait<T> {
 }
 
 pub struct EntityManager {
-    menu_buttons: (
-        Vec<usize>,
-        Vec<Transform>,
-        Vec<ShapeRenderer>,
-        Vec<ButtonTrigger>,
-        Vec<Box<dyn ButtonHandler>>,
-    ),
-    skyboxes: (Vec<usize>, Vec<SkyboxRenderer>),
-    cameras: (Vec<usize>, Vec<Box<dyn Controller>>, Vec<Camera>),
-    meshes: (
-        Vec<usize>,
-        Vec<Transform>,
-        Vec<Mesh<MeshShader, PhongMaterial>>,
-    ),
-    lights: (Vec<usize>, Vec<Transform>, Vec<Light>),
-    text_renderers: (Vec<usize>, Vec<Transform>, Vec<TextRenderer>),
+    entities: Vec<Box<dyn Any>>,
 
-    next_entity_id: usize,
+    global_entity_id: usize,
 }
 
 impl EntityManager {
     pub fn new() -> Self {
-        let menu_buttons = (vec![], vec![], vec![], vec![], vec![]);
-        let skyboxes = (vec![], vec![]);
-        let cameras = (vec![], vec![], vec![]);
-        let meshes = (vec![], vec![], vec![]);
-        let lights = (vec![], vec![], vec![]);
-        let text_renderers = (vec![], vec![], vec![]);
-
         EntityManager {
-            next_entity_id: 0,
-            menu_buttons,
-            skyboxes,
-            cameras,
-            meshes,
-            lights,
-            text_renderers,
+            global_entity_id: 0,
+            entities: vec![],
         }
     }
 
-    pub fn get_camera(&self, id: usize) -> Option<&Camera> {
-        let cam_ref = self.cameras.0.iter().position(|&cam_id| cam_id == id)?;
-        Some(&self.cameras.2[cam_ref])
+    pub fn add<T: 'static>(&mut self, entity: T) -> usize {
+        self.add_at(entity, Transform::new())
     }
-}
 
-impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ShapeRenderer)> for EntityManager {
-    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a ShapeRenderer)> + 'a> {
-        let transforms = self.menu_buttons.1.iter();
-        let shapes = self.menu_buttons.2.iter();
-        Box::new(transforms.zip(shapes))
+    pub fn add_at<T: 'static>(&mut self, entity: T, transform: Transform) -> usize {
+        let id = self.global_entity_id;
+        let new_entity = GameEntity::new(entity, transform, &mut self.global_entity_id);
+
+        if let Some(entity_container) = self
+            .entities
+            .iter_mut()
+            .find_map(|container| container.downcast_mut::<Vec<GameEntity<T>>>())
+        {
+            entity_container.push(new_entity);
+        } else {
+            self.entities.push(Box::new(vec![new_entity]));
+        }
+        id
     }
-}
 
-impl<'a> ComponentIteratorGenerator<'a, ((usize, &'a ButtonTrigger), &'a dyn ButtonHandler)>
-    for EntityManager
-{
-    fn iter(
-        &'a self,
-    ) -> Box<dyn Iterator<Item = ((usize, &'a ButtonTrigger), &'a dyn ButtonHandler)> + 'a> {
-        let entities = self.menu_buttons.0.iter().map(|entity| *entity);
-        let triggers = self.menu_buttons.3.iter();
-        let handlers = self.menu_buttons.4.iter().map(|handler| handler.as_ref());
-        Box::new(entities.zip(triggers).zip(handlers))
+    pub fn get<T: 'static>(&self, id: usize) -> Option<&GameEntity<T>> {
+        self.entities.iter().find_map(|container| {
+            let container = container.downcast_ref::<Vec<GameEntity<T>>>()?;
+            container.iter().find(|e| e.id == id)
+        })
     }
-}
 
-pub type SkyboxBundle<'a> = (usize, &'a SkyboxRenderer);
-
-impl<'a> ComponentIteratorGenerator<'a, SkyboxBundle<'a>> for EntityManager {
-    fn iter(&'a self) -> Box<dyn Iterator<Item = SkyboxBundle<'a>> + 'a> {
-        let entities = self.skyboxes.0.iter().map(|entity| *entity);
-        let skyboxes = self.skyboxes.1.iter();
-        Box::new(entities.zip(skyboxes))
+    pub fn get_mut<T: 'static>(&mut self, id: usize) -> Option<&mut GameEntity<T>> {
+        self.entities.iter_mut().find_map(|container| {
+            let container = container.downcast_mut::<Vec<GameEntity<T>>>()?;
+            container.iter_mut().find(|e| e.id == id)
+        })
     }
-}
 
-impl<'a> ComponentMutIteratorGenerator<'a, ((usize, &'a dyn Controller), &'a mut Camera)>
-    for EntityManager
-{
-    fn iter(
-        &'a mut self,
-    ) -> Box<dyn Iterator<Item = ((usize, &'a dyn Controller), &'a mut Camera)> + 'a> {
-        let entities = self.cameras.0.iter().map(|entity| *entity);
-        let controllers = self.cameras.1.iter().map(|controller| controller.as_ref());
-        let cameras = self.cameras.2.iter_mut();
-        Box::new(entities.zip(controllers).zip(cameras))
+    pub fn iter<T: 'static>(&self) -> impl Iterator<Item = &GameEntity<T>> {
+        self.entities
+            .iter()
+            .find_map(|container| Some(container.downcast_ref::<Vec<GameEntity<T>>>()?.iter()))
+            .unwrap_or(std::slice::Iter::default())
     }
-}
 
-impl<'a>
-    ComponentIteratorGenerator<
-        'a,
-        (
-            (usize, &'a Transform),
-            &'a Mesh<MeshShader, PhongMaterial>,
-        ),
-    > for EntityManager
-{
-    fn iter(
-        &'a self,
-    ) -> Box<
-        dyn Iterator<
-                Item = (
-                    (usize, &'a Transform),
-                    &'a Mesh<MeshShader, PhongMaterial>,
-                ),
-            > + 'a,
-    > {
-        let entities = self.meshes.0.iter().map(|entity| *entity);
-        let transforms = self.meshes.1.iter();
-        let meshes = self.meshes.2.iter();
-        Box::new(entities.zip(transforms).zip(meshes))
-    }
-}
-
-impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Light)> for EntityManager {
-    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a Light)> + 'a> {
-        let transforms = self.lights.1.iter();
-        let lights = self.lights.2.iter();
-        Box::new(transforms.zip(lights))
-    }
-}
-
-impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for EntityManager {
-    fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a TextRenderer)> + 'a> {
-        let transforms = self.text_renderers.1.iter();
-        let renderer = self.text_renderers.2.iter();
-        Box::new(transforms.zip(renderer))
+    pub fn iter_mut<T: 'static>(&mut self) -> impl Iterator<Item = &mut GameEntity<T>> {
+        self.entities
+            .iter_mut()
+            .find_map(|container| Some(container.downcast_mut::<Vec<GameEntity<T>>>()?.iter_mut()))
+            .unwrap_or(std::slice::IterMut::default())
     }
 }

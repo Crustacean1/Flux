@@ -12,7 +12,7 @@
 ## Game mechanics
 ### During game
 - Solar flares in levels close to stars damage ship systems
-- Swarm AI behaviour, player can(*somewhat* influence friendly unit movement )
+- Swarm AI behavior, player can(*somewhat* influence friendly unit movement )
 - Resource management (fuel, rocket ammunition, repairs)
 - Black Holes / Gravity wells 
 - Trajectory markers

@@ -30,14 +30,15 @@ struct PointLight{
 vec3 cast_light(Material material, DirectionalLight light){
     vec3 ambient = vec3(1,1,1) * light.ambient;
 
-    vec3 reflection = vNorm - 2 * dot(vNorm, light.direction) * vNorm;
-    vec3 diffuse = vec3(1,1,1) * light.diffuse;
-    diffuse *= dot(reflection, vNorm);
+    vec3 diffuse = light.diffuse;
+    diffuse *= dot(-light.direction, vNorm);
 
     vec3 specular = vec3(1,1,1) * light.specular;
-    specular *= pow(max(dot(-normalize(vPos), normalize(reflection)), 0), 32);
+    vec3 reflection = reflect(light.direction, vNorm);
+    vec3 camera_dir = -normalize(vPos);
+    specular *= pow(max(dot(camera_dir, reflection), 0), 32);
 
-    return ambient + diffuse  + specular;
+    return ambient + diffuse + specular;
 }
 
 uniform Material material;
@@ -50,5 +51,4 @@ void main() {
     for(int i = 0; i< directional_light_count; ++i) {
         fCol += vec4(cast_light(material, directional_lights[i]), 0);
     }
-    fCol += vec4(0,1,0,0);
 }

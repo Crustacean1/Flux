@@ -15,7 +15,6 @@ pub struct GraphicsContext {
     window: glfw::Window,
     event_channel: Receiver<(f64, WindowEvent)>,
     tracked_mouse_pos: (f32, f32),
-    tracked_keys: Vec<u8>,
 }
 
 impl From<InitError> for GameError {
@@ -27,13 +26,14 @@ impl From<InitError> for GameError {
 #[derive(Clone)]
 pub enum IoEvent {
     WindowResized((f32, f32)),
+    MousePositionChange((f32, f32)),
     MouseMotion((f32, f32)),
     LeftMousePress((f32, f32)),
     LeftMouseRelease((f32, f32)),
     RightMousePress((f32, f32)),
     RightMouseRelease((f32, f32)),
-    KeyPressed(u8),
-    KeyHeld(u8),
+    KeyPressed(char),
+    KeyReleased(char),
     Other,
 }
 
@@ -84,14 +84,12 @@ impl GraphicsContext {
 
         unsafe {
             gl::ClearColor(0., 0., 0., 1.0);
-            gl::PointSize(10.0);
+            gl::PointSize(2.0);
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable(gl::DEPTH_TEST);
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
         }
-
-        let tracked_keys = vec![];
 
         Ok(GraphicsContext {
             title: String::from(title),
@@ -99,7 +97,6 @@ impl GraphicsContext {
             event_channel,
             glfw,
             tracked_mouse_pos: (0.0, 0.0),
-            tracked_keys,
         })
     }
 
@@ -107,8 +104,10 @@ impl GraphicsContext {
         self.glfw.poll_events();
         glfw::flush_messages(&self.event_channel).for_each(|(_time, event)| match event {
             WindowEvent::CursorPos(x, y) => {
+                let (prev_x, prev_y) = self.tracked_mouse_pos;
+                event_sender.send(IoEvent::MouseMotion((x as f32 - prev_x, y as f32 - prev_y)));
                 self.tracked_mouse_pos = (x as f32, y as f32);
-                event_sender.send(IoEvent::MouseMotion((x as f32, y as f32)));
+                event_sender.send(IoEvent::MousePositionChange((x as f32, y as f32)));
             }
             WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Press, _) => {
                 event_sender.send(IoEvent::LeftMousePress(self.tracked_mouse_pos));
@@ -126,23 +125,13 @@ impl GraphicsContext {
                 event_sender.send(ContextEvent::Close);
             }
             WindowEvent::Key(key, _, Action::Press, _) => {
-                event_sender.send(IoEvent::KeyPressed(key as u8));
-                self.tracked_keys.push(key as u8);
+                event_sender.send(IoEvent::KeyPressed(key as u8 as char));
             }
             WindowEvent::Key(key, _, Action::Release, _) => {
-                if let Some(tracked_key) = self
-                    .tracked_keys
-                    .iter()
-                    .position(|key_id| *key_id == key as u8)
-                {
-                    self.tracked_keys.remove(tracked_key);
-                }
+                event_sender.send(IoEvent::KeyReleased(key as u8 as char));
             }
             _ => {}
         });
-        self.tracked_keys
-            .iter()
-            .for_each(|&key| event_sender.send(IoEvent::KeyHeld(key)))
     }
 
     pub fn cursor_lock(&mut self, lock: bool) {

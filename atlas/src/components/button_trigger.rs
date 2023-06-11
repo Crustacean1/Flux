@@ -73,16 +73,5 @@ impl ButtonTriggerSystem {
         (x, y): (f32, f32),
         event_sender: &mut EventSender,
     ) {
-        if let Some((_, handler)) = entity_manager
-            .iter()
-            .filter(
-                |((_, trigger), _): &((usize, &ButtonTrigger), &dyn ButtonHandler)| {
-                    trigger.intersects(x, y)
-                },
-            )
-            .max_by_key(|((_, trigger), _)| trigger.level)
-        {
-            handler.on_click(event_sender);
-        }
     }
 }

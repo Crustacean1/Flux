@@ -1,8 +1,12 @@
 use atlas::{
     components::{
-        skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer, transform::Transform,
+        physical_body::PhysicalBody, skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer,
+        transform::Transform,
     },
     entity_manager::{EntityManager, EntityManagerTrait},
+    game_entities::{
+        enemy_ship::EnemyShip, space_box::SpaceBox, starlight::Starlight, ui_label::UiLabel,
+    },
     game_root::GameError,
     graphics::{
         lights::{Light, LightColor},
@@ -23,7 +27,7 @@ pub fn asteroids(
     let skybox_material: SkyboxMaterial = resource_manager.get("space1").res;
     let skybox = SkyboxRenderer::new(1.0, skybox_material);
 
-    let meshes = ["spaceship1"];
+    let meshes = ["spaceship3"];
 
     let meshes: Vec<Mesh<MeshShader, PhongMaterial>> = meshes
         .iter()
@@ -37,41 +41,39 @@ pub fn asteroids(
         let scale = Vec3::new(1., 1., 1.);
         let rotation = Vec3::new(0.0, 0.0, 0.0);
 
-        entity_manager.add_entity((
-            Transform {
-                position,
-                scale,
-                rotation,
+        entity_manager.add_at(
+            EnemyShip {
+                physical_body: PhysicalBody::new(10., 10.),
+                mesh: mesh.clone(),
             },
-            mesh.clone(),
-        ));
+            Transform::pos(Vec3::new(0.0, 0.0, -10.0)),
+        );
+
+        entity_manager.add_at(
+            EnemyShip {
+                physical_body: PhysicalBody::new(10., 10.),
+                mesh: mesh.clone(),
+            },
+            Transform::pos(Vec3::new(0.0, 0.0, 10.0)),
+        );
     });
 
-    entity_manager.add_entity((
-        Transform::pos(Vec3::new(0.0, 0.0, 0.0)),
-        Light::DirectionalLight(
-            Vec3::new(10.0, -100.0, 0.0),
+    entity_manager.add(Starlight {
+        light: Light::DirectionalLight(
+            Vec3::new(0.0, -1.0, 0.0),
             LightColor {
                 ambient: Vec3::new(0.01, 0.01, 0.01),
-                diffuse: Vec3::new(0.01, 0.01, 0.01),
+                diffuse: Vec3::new(0.1, 0.1, 0.1),
                 specular: Vec3::new(0.3, 0.3, 0.3),
             },
         ),
-    ));
+    });
 
-    entity_manager.add_entity((
-        Transform {
-            position: Vec3::new(50., 50., 0.),
-            scale: Vec3::new(1., 1., 1.),
-            rotation: Vec3::new(0.0, 0.0, 0.0),
-        },
-        TextRenderer::new(
-            "Velocity: 18.31 [m/s]",
-            font,
-        ),
-    ));
+    entity_manager.add(UiLabel {
+        renderer: TextRenderer::new("Velocity: 18.31 [m/s]", font),
+    });
 
-    entity_manager.add_entity(skybox);
+    entity_manager.add(SpaceBox { renderer: skybox });
 
     Ok(())
 }

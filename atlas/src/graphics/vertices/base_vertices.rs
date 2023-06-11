@@ -1,24 +1,23 @@
-use std::mem::size_of;
+/*use std::mem::size_of;
 
-use super::{Index, PrimitiveType, Shapely, Vertex};
-use macros::Vertex;
+use super::{Index, PrimitiveType, Shapely};
 
 const PI: f32 = 3.1415926535;
 
-#[derive(Vertex, Debug)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct Vertex2P {
     pos: [f32; 2],
 }
 
-#[derive(Vertex, Debug)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct Vertex2PT {
     pub pos: [f32; 2],
     pub tex: [f32; 2],
 }
 
-#[derive(Vertex, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Vertex3PT {
     pub pos: [f32; 3],
@@ -76,15 +75,18 @@ impl Shapely for Vertex3PT {
         let phi = (1.0 + (5.0 as f32).sqrt()) * 0.5;
         (0..(detail * detail))
             .map(|i| {
-                let y = i as f32* 0.5 / (detail * detail) as f32;
-                let x = i as f32 * 0.5 / phi;
-                let x = x - (x / 2.0) as i32 as f32 * 2.0;
-                //let x = i as f32 * 0.02;
-                let radius = (y).sqrt();
-                let angle = 2.0 * PI * x * phi;
+                let y = i as f32 * 0.1 / (detail * detail) as f32;
+                let x = i as f32 * 0.1 / phi;
+                let x = x;
+
+                let radius = (y).sqrt() * 4.0;
+                let angle = 2.0 * PI * x;
+
+                let x = angle.cos() * radius;
+                let y = angle.sin() * radius;
+
                 Self {
-                    pos: [angle.cos() * radius, angle.sin() * radius, 0.0],
-                    //pos: [x, y , 0.0],
+                    pos: [x, y, 0.0],
                     tex: [0.0, 0.0],
                 }
             })
@@ -264,4 +266,4 @@ impl Shapely for TriangleIndex {
             .flatten()
             .collect()
     }
-}
+}*/

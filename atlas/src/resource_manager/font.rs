@@ -7,7 +7,7 @@ use crate::{
     game_root::GameError,
     graphics::{
         primitive::Primitive,
-        texture::{ChannelLayout, Texture},
+        texture::{ChannelLayout, Texture}, vertices::layouts::{PTNVertex, TriangleGeometry, PTVertex},
     },
 };
 
@@ -34,7 +34,7 @@ impl Default for Font {
 }
 
 impl Font {
-    pub fn render(&self, text: &str, target: &mut Primitive) {
+    pub fn render(&self, text: &str, target: &mut Primitive<PTVertex, TriangleGeometry>) {
         let (mut x, y) = (0.0, 0.0);
         let char_quads: Vec<_> = text
             .bytes()

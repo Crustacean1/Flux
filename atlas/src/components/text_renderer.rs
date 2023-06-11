@@ -1,13 +1,13 @@
-use std::ptr;
-
 use glad_gl::gl;
-use glam::{Vec2, Vec3};
+use std::ptr;
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
+    game_entities::ui_label::UiLabel,
     graphics::{
-        primitive::{MeshIndices, Primitive},
+        primitive::Primitive,
         shaders::{text_shader::TextShader, ShaderProgram},
+        vertices::layouts::{PTVertex, TriangleGeometry},
     },
     resource_manager::font::Font,
 };
@@ -15,18 +15,14 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
-    text_quad: Primitive,
+    text_quad: Primitive<PTVertex, TriangleGeometry>,
     shader_program: ShaderProgram<TextShader>,
 }
 
 impl TextRendererSystem {
     pub fn new(shader: ShaderProgram<TextShader>) -> Self {
         TextRendererSystem {
-            text_quad: Primitive::new(
-                &[0.; 16],
-                &[2, 2],
-                &mut MeshIndices::Triangles(vec![0, 1, 2, 2, 3, 0]),
-            ),
+            text_quad: Primitive::new(vec![], vec![]),
             shader_program: shader,
         }
     }
@@ -34,13 +30,13 @@ impl TextRendererSystem {
 
 pub struct TextRenderer {
     text: String,
-    primitive: Primitive,
+    primitive: Primitive<PTVertex, TriangleGeometry>,
     font: Font,
 }
 
 impl TextRenderer {
     pub fn new(text: &str, font: Font) -> Self {
-        let mut primitive = Primitive::new(&[], &[2, 2], &mut MeshIndices::Triangles(vec![]));
+        let mut primitive = Primitive::new(vec![], vec![]);
         font.render(text, &mut primitive);
 
         TextRenderer {
@@ -50,17 +46,31 @@ impl TextRenderer {
         }
     }
 
-    pub fn primitive(&self) -> &Primitive {
+    pub fn primitive(&self) -> &Primitive<PTVertex, TriangleGeometry> {
         &self.primitive
+    }
+
+    pub fn get_text(&self) -> String {
+        self.text.clone()
+    }
+}
+
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for EntityManager {
+    fn get_view(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a TextRenderer)> + 'a> {
+        let labels = self
+            .iter::<UiLabel>()
+            .map(|label| (&label.transform, &label.entity.renderer));
+
+        Box::new(labels)
     }
 }
 
 impl TextRendererSystem {
     pub fn render(&mut self, entity_manager: &EntityManager, camera: &Camera) {
         self.shader_program.bind();
-        entity_manager.iter().for_each(
+        entity_manager.get_view().for_each(
             |(transform, text_renderer): (&Transform, &TextRenderer)| unsafe {
-                let projection_view_model = camera.projection_mat() * transform.model();
+                let projection_view_model = camera.projection() * transform.model();
                 let primitive = text_renderer.primitive();
 
                 primitive.bind();

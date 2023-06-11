@@ -1,69 +1,35 @@
-use std::mem::{self, size_of};
-
 use glad_gl::gl;
 
 use super::vertices::{
-    base_vertices::{TriangleIndex, Vertex2PT, Vertex3PT},
+    buffer::Buffer,
+    layouts::{BufferElement, IndexGeometry},
     Shapely,
 };
 
-pub enum MeshIndices {
-    Points(Vec<u32>),
-    Lines(Vec<u32>),
-    Triangles(Vec<u32>),
-}
-
-impl MeshIndices {
-    pub fn to_buffer(&self) -> &[u32] {
-        match self {
-            MeshIndices::Points(buffer) => buffer,
-            MeshIndices::Lines(buffer) => buffer,
-            MeshIndices::Triangles(buffer) => buffer,
-        }
-    }
-
-    pub fn to_gl(&self) -> u32 {
-        match self {
-            MeshIndices::Points(_) => gl::POINTS,
-            MeshIndices::Lines(_) => gl::LINES,
-            MeshIndices::Triangles(_) => gl::TRIANGLES,
-        }
-    }
-}
-
 #[derive(Clone)]
-pub struct Primitive {
-    pub vao: u32,
-    vbo: u32,
-    ebo: u32,
-    layout: Vec<usize>,
-    index_count: u32,
-    vertex_count: u32,
-    mode: u32,
+pub struct Primitive<Vertex: BufferElement, Index: IndexGeometry> {
+    vao: u32,
+    vertices: Buffer<Vertex>,
+    indices: Buffer<Index>,
 }
 
-impl Default for Primitive {
+impl<Vertex: BufferElement, Geometry: IndexGeometry> Default for Primitive<Vertex, Geometry> {
     fn default() -> Self {
         Self::sphere(1.0, 10)
     }
 }
 
-impl Primitive {
-    pub fn new(vertices: &[f32], shape: &[usize], indices: &mut MeshIndices) -> Self {
-        let (vao, vbo, ebo) = Self::create_buffers(shape);
+impl<Vertex: BufferElement, Geometry: IndexGeometry> Primitive<Vertex, Geometry> {
+    pub fn new(vertices: Vec<Vertex>, indices: Vec<Geometry>) -> Self {
+        let vao = Self::create_vao();
+        let vertices = Buffer::build(vertices);
+        let indices = Buffer::build(indices);
 
-        let mut mesh = Self {
+        Self {
             vao,
-            vbo,
-            ebo,
-            mode: indices.to_gl(),
-            vertex_count: 0,
-            index_count: 0,
-            layout: Vec::from(shape),
-        };
-
-        mesh.load(&vertices, indices.to_buffer());
-        mesh
+            vertices,
+            indices,
+        }
     }
 
     pub fn bind(&self) {
@@ -72,7 +38,7 @@ impl Primitive {
         }
     }
 
-    pub fn reload_vertices(&mut self, vertices: &[f32]) {
+    /*pub fn reload_vertices(&mut self, vertices: &[f32]) {
         unsafe {
             gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
             let mut buffer_size: i32 = 0;
@@ -122,9 +88,9 @@ impl Primitive {
 
             self.index_count = (indices.len() / 3) as u32;
         }
-    }
+    }*/
 
-    pub fn load(&mut self, vertices: &[f32], indices: &[u32]) {
+    /*pub fn load(&mut self, vertices: &[f32], indices: &[u32]) {
         self.index_count = indices.len() as u32;
         self.vertex_count = vertices.len() as u32;
         unsafe {
@@ -147,17 +113,17 @@ impl Primitive {
                 gl::STATIC_DRAW,
             );
         }
+    }*/
+
+    fn create_vao() -> u32 {
+        unsafe {
+            let mut vao = 0;
+            gl::GenVertexArrays(1, &mut vao);
+            vao
+        }
     }
 
-    pub fn primitive_type(&self) -> u32 {
-        self.mode
-    }
-
-    pub fn count(&self) -> u32 {
-        self.index_count * 4
-    }
-
-    fn create_buffers(attributes: &[usize]) -> (u32, u32, u32) {
+    /*fn create_buffers(attributes: &[usize]) -> (u32, u32, u32) {
         let (mut vao, mut vbo, mut ebo) = (0, 0, 0);
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
@@ -186,10 +152,10 @@ impl Primitive {
             });
         }
         (vao, vbo, ebo)
-    }
+    }*/
 }
 
-impl Primitive {
+/*impl<T, Q> Primitive<T, Q> {
     pub fn quad(width: f32, height: f32) -> Self {
         let vertices = Vertex2PT::quad(width, height);
         let vertices: Vec<_> = vertices
@@ -244,4 +210,4 @@ impl Primitive {
 
         Self::new(&vertices, &[3, 2], &mut MeshIndices::Points(indices))
     }
-}
+}*/

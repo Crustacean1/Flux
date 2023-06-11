@@ -1,6 +1,10 @@
 use glad_gl::gl;
 
+pub mod attributes;
 pub mod base_vertices;
+pub mod buffer;
+pub mod generator;
+pub mod layouts;
 
 pub enum PrimitiveType {
     Points,

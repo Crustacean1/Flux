@@ -102,7 +102,7 @@ impl ShaderProgram<MeshShader> {
         }
     }
 
-    pub fn bind_projection_view_model(&mut self, projection_view_model: &[f32; 16]) {
+    pub fn bind_projection_view_model(&self, projection_view_model: &[f32; 16]) {
         Self::load_mat(
             &self,
             projection_view_model,
@@ -114,7 +114,7 @@ impl ShaderProgram<MeshShader> {
         Self::load_mat(&self, view_model, self.shader.view_model_uniform)
     }
 
-    pub fn bind_directional_light(&mut self, i: usize, dir: &Vec3, color: &LightColor) {
+    pub fn bind_directional_light(&self, i: usize, dir: &Vec3, color: &LightColor) {
         unsafe {
             gl::Uniform3f(
                 self.shader.directional_light_uniforms[i].ambient,
@@ -143,7 +143,7 @@ impl ShaderProgram<MeshShader> {
         }
     }
 
-    pub fn bind_directional_light_count(&mut self, count: u32) {
+    pub fn bind_directional_light_count(&self, count: u32) {
         unsafe {
             gl::Uniform1i(self.shader.directional_light_count_uniform, count as i32);
         }

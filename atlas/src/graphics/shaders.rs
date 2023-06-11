@@ -4,11 +4,10 @@ pub mod text_shader;
 pub mod ui_shader;
 
 use glad_gl::gl;
+use glam::Vec3;
 
 use crate::game_root::GameError;
 use std::{ffi::c_char, marker::PhantomData, mem, path::PathBuf};
-
-use super::lights::LightColor;
 
 pub trait Shader<T: Clone> {
     fn build(shader_id: u32) -> Result<T, GameError>;
@@ -67,6 +66,12 @@ impl<T: Clone + Shader<T>> ShaderProgram<T> {
         }
     }
 
+    fn load_vec3(&self, vec: Vec3, location: i32) {
+        unsafe {
+            gl::Uniform3f(location, vec.x, vec.y, vec.z);
+        }
+    }
+
     fn get_location(shader_id: u32, name: &str) -> Result<i32, GameError> {
         unsafe {
             match gl::GetUniformLocation(shader_id, mem::transmute(name.as_ptr())) {
@@ -79,7 +84,6 @@ impl<T: Clone + Shader<T>> ShaderProgram<T> {
         }
     }
 }
-
 
 impl<T: Clone> Default for ShaderProgram<T> {
     fn default() -> Self {

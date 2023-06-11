@@ -11,9 +11,13 @@ use gltf::{
 };
 
 use crate::graphics::{
+    material::phong_material::PhongMaterial,
     mesh::Mesh,
-    primitive::{MeshIndices, Primitive},
-    shaders::mesh_shader::MeshShader, material::phong_material::PhongMaterial,
+    primitive::Primitive,
+    vertices::{
+        attributes::Triangle,
+        layouts::{PTNVertex, TriangleGeometry},
+    },
 };
 
 use super::{resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager};
@@ -61,7 +65,7 @@ pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager
     );*/
 }
 
-fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, PhongMaterial> {
+fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<PTNVertex, TriangleGeometry, PhongMaterial> {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
@@ -121,8 +125,7 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<MeshShader, PhongMaterial> {
                             material,
                             Primitive::new(
                                 &vertices,
-                                &[3, 2, 3],
-                                &mut MeshIndices::Triangles(indices),
+                                indices.into(),
                             ),
                         ))
                     })
