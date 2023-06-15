@@ -1,4 +1,4 @@
-/*use std::mem::size_of;
+use std::mem::size_of;
 
 use super::{Index, PrimitiveType, Shapely};
 
@@ -266,4 +266,4 @@ impl Shapely for TriangleIndex {
             .flatten()
             .collect()
     }
-}*/
+}

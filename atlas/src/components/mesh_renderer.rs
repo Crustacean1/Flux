@@ -8,14 +8,13 @@ use crate::{
         material::phong_material::PhongMaterial,
         mesh::Mesh,
         shaders::{mesh_shader::MeshShader, ShaderProgram},
-        vertices::layouts::{PTNVertex, TriangleGeometry},
     },
 };
 
 use super::{camera::Camera, transform::Transform};
 
 pub struct MeshRenderer {
-    pub mesh: Mesh<PTNVertex, TriangleGeometry, PhongMaterial>,
+    pub mesh: Mesh,
     pub material: PhongMaterial,
 }
 
@@ -23,25 +22,8 @@ pub struct MeshRendererSystem {
     shader: ShaderProgram<MeshShader>,
 }
 
-impl<'a>
-    ComponentIteratorGenerator<
-        'a,
-        (
-            &'a Transform,
-            &'a Mesh<PTNVertex, TriangleGeometry, PhongMaterial>,
-        ),
-    > for EntityManager
-{
-    fn get_view(
-        &'a self,
-    ) -> Box<
-        dyn Iterator<
-                Item = (
-                    &Transform,
-                    &Mesh<PTNVertex, TriangleGeometry, PhongMaterial>,
-                ),
-            > + 'a,
-    > {
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Mesh)> for EntityManager {
+    fn get_view(&'a self) -> Box<dyn Iterator<Item = (&Transform, &Mesh)> + 'a> {
         let enemies = self
             .iter::<EnemyShip>()
             .map(|ship| (&ship.transform, &ship.entity.mesh));
@@ -80,8 +62,9 @@ impl MeshRendererSystem {
 
         self.setup_lights(entity_manager, camera, camera_transform);
 
-        entity_manager.get_view().for_each(
-            |(transform, mesh): (&Transform, &Mesh<MeshShader, PhongMaterial>)| {
+        entity_manager
+            .get_view()
+            .for_each(|(transform, mesh): (&Transform, &Mesh)| {
                 let view_model = view * transform.model();
                 let projection_view_model = projection * view * transform.model();
 
@@ -90,8 +73,7 @@ impl MeshRendererSystem {
                 self.shader.bind_view_model(&view_model.to_cols_array());
 
                 mesh.render(&self.shader);
-            },
-        );
+            });
         Some(())
     }
 

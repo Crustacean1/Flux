@@ -1,14 +1,6 @@
-use crate::{
-    components::{physical_body::PhysicalBody, transform::Transform},
-    graphics::{
-        material::phong_material::PhongMaterial,
-        mesh::Mesh,
-        shaders::mesh_shader::MeshShader,
-        vertices::layouts::{PTNVertex, TriangleGeometry},
-    },
-};
+use crate::{graphics::mesh::Mesh, components::physical_body::PhysicalBody};
 
 pub struct EnemyShip {
     pub physical_body: PhysicalBody,
-    pub mesh: Mesh<PTNVertex, TriangleGeometry, PhongMaterial>,
+    pub mesh: Mesh,
 }

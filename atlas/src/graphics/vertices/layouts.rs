@@ -1,10 +1,3 @@
-use vertex_macro_derive::BufferLayout;
-
-use super::{
-    attributes::{Attribute, AttributeTrait, Normal, Position, Position2D, TexCoords, Triangle},
-    Shapely,
-};
-
 pub trait IndexGeometry: BufferElement {
     fn geometry() -> u32;
 }
@@ -14,18 +7,24 @@ pub trait BufferElement {
     fn layout() -> Vec<usize>;
 }
 
-pub struct PVertex(Attribute<Position>);
-pub struct PNVertex(Attribute<Position>, Attribute<Normal>);
-pub struct PTNVertex(Attribute<Position>, Attribute<TexCoords>, Attribute<Normal>);
-pub struct PTVertex(Attribute<Position>, Attribute<TexCoords>);
-pub struct P2TVertex(Attribute<Position2D>, Attribute<TexCoords>);
-pub struct TriangleGeometry(Attribute<Triangle>);
+#[derive(Clone)]
+pub struct PVertex(pub [f32; 3]);
+#[derive(Clone)]
+pub struct PNVertex(pub [f32; 3], pub [f32; 3]);
+#[derive(Clone)]
+pub struct PTNVertex(pub [f32; 3], pub [f32; 2], pub [f32; 3]);
+#[derive(Clone)]
+pub struct PTVertex(pub [f32; 3], pub [f32; 2]);
+#[derive(Clone)]
+pub struct P2TVertex(pub [f32; 2], pub [f32; 2]);
+#[derive(Clone)]
+pub struct TriangleGeometry(pub [u32; 3]);
 
 impl BufferElement for P2TVertex {
     type ElementType = f32;
 
     fn layout() -> Vec<usize> {
-        vec![Position2D::COUNT, TexCoords::COUNT]
+        vec![2, 2]
     }
 }
 
@@ -33,7 +32,7 @@ impl BufferElement for PTVertex {
     type ElementType = f32;
 
     fn layout() -> Vec<usize> {
-        vec![Position::COUNT, TexCoords::COUNT]
+        vec![3, 2]
     }
 }
 
@@ -41,18 +40,14 @@ impl BufferElement for PTNVertex {
     type ElementType = f32;
 
     fn layout() -> Vec<usize> {
-        vec![Position::COUNT, TexCoords::COUNT, Normal::COUNT]
+        vec![3, 2, 3]
     }
-}
-
-impl IndexGeometry for TriangleGeometry {
-    fn geometry() -> u32 {}
 }
 
 impl BufferElement for TriangleGeometry {
     type ElementType = u32;
 
     fn layout() -> Vec<usize> {
-        todo!()
+        vec![3]
     }
 }

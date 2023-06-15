@@ -10,17 +10,9 @@ use gltf::{
     Gltf,
 };
 
-use crate::graphics::{
-    material::phong_material::PhongMaterial,
-    mesh::Mesh,
-    primitive::Primitive,
-    vertices::{
-        attributes::Triangle,
-        layouts::{PTNVertex, TriangleGeometry},
-    },
-};
+use crate::graphics::{material::phong_material::PhongMaterial, mesh::Mesh, primitive::Primitive};
 
-use super::{resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager};
+use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
 
 #[derive(Clone)]
 struct MeshNode<'a> {
@@ -54,18 +46,9 @@ pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager
             }
         }
     }
-
-    /*let default_material: Resource<TextureMaterial> = res_man.get("default");
-
-    res_man.register(
-        "sample",
-        Mesh::<MeshShader, TextureMaterial> {
-            primitives: vec![(default_material.res, Primitive::sphere(1.0, 3))],
-        },
-    );*/
 }
 
-fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<PTNVertex, TriangleGeometry, PhongMaterial> {
+fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
@@ -121,13 +104,7 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh<PTNVertex, TriangleGeometry, P
                             PhongMaterial::default()
                         };
 
-                        Some((
-                            material,
-                            Primitive::new(
-                                &vertices,
-                                indices.into(),
-                            ),
-                        ))
+                        Some((material, Primitive::new(&vertices, indices.into())))
                     })
                     .collect(),
             )

@@ -1,7 +1,3 @@
-use std::{ffi::c_void, mem::size_of};
-
-use glad_gl::gl;
-use glam::{Mat4, Vec4};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -67,13 +63,7 @@ impl SkyboxRendererSystem {
 
                     (0..6).for_each(|i| {
                         self.shader.bind_billboard(i as i32);
-
-                        gl::DrawElements(
-                            skybox.mesh.primitive_type(),
-                            6,
-                            gl::UNSIGNED_INT,
-                            (i * 6 * size_of::<u32>()) as *const c_void,
-                        );
+                        skybox.mesh.render_sub((i * 6)..(i * 6 + 6));
                     });
                 });
         }

@@ -7,7 +7,7 @@ use crate::{
     graphics::{
         primitive::Primitive,
         shaders::{text_shader::TextShader, ShaderProgram},
-        vertices::layouts::{PTVertex, TriangleGeometry},
+        vertices::layouts::{P2TVertex, PTVertex, TriangleGeometry},
     },
     resource_manager::font::Font,
 };
@@ -15,14 +15,12 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
-    text_quad: Primitive<PTVertex, TriangleGeometry>,
     shader_program: ShaderProgram<TextShader>,
 }
 
 impl TextRendererSystem {
     pub fn new(shader: ShaderProgram<TextShader>) -> Self {
         TextRendererSystem {
-            text_quad: Primitive::new(vec![], vec![]),
             shader_program: shader,
         }
     }
@@ -30,13 +28,13 @@ impl TextRendererSystem {
 
 pub struct TextRenderer {
     text: String,
-    primitive: Primitive<PTVertex, TriangleGeometry>,
+    primitive: Primitive<P2TVertex, TriangleGeometry>,
     font: Font,
 }
 
 impl TextRenderer {
     pub fn new(text: &str, font: Font) -> Self {
-        let mut primitive = Primitive::new(vec![], vec![]);
+        let mut primitive = Primitive::triangles(&vec![], &vec![]);
         font.render(text, &mut primitive);
 
         TextRenderer {
@@ -46,7 +44,7 @@ impl TextRenderer {
         }
     }
 
-    pub fn primitive(&self) -> &Primitive<PTVertex, TriangleGeometry> {
+    pub fn primitive(&self) -> &Primitive<P2TVertex, TriangleGeometry> {
         &self.primitive
     }
 

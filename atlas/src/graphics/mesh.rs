@@ -2,40 +2,39 @@ use std::ptr;
 
 use glad_gl::gl;
 
+use super::material::phong_material::PhongMaterial;
+use super::shaders::mesh_shader::MeshShader;
+use super::vertices::layouts::{PTNVertex, PTVertex, TriangleGeometry};
 use super::{
-    material::Material,
+    material::{skybox_material::SkyboxMaterial, Material},
     primitive::Primitive,
     shaders::ShaderProgram,
-    vertices::layouts::{BufferElement, IndexGeometry},
 };
 
 #[derive(Clone)]
-pub struct Mesh<Vertex: BufferElement, Geometry: IndexGeometry, Material> {
-    pub primitives: Vec<(Material, Primitive<Vertex, Geometry>)>,
+pub struct Mesh {
+    pub primitives: Vec<(PhongMaterial, Primitive<PTNVertex, TriangleGeometry>)>,
 }
 
-impl<Vertex: BufferElement, Geometry: IndexGeometry, Material> Mesh<Vertex, Geometry, Material> {
-    pub fn render<Q: Clone>(&self, shader: &ShaderProgram<Q>) {
+pub struct Skybox {
+    skybox: Primitive<PTVertex, TriangleGeometry>,
+    skybox_material: SkyboxMaterial,
+}
+
+impl Mesh {
+    pub fn render(&self, shader: &ShaderProgram<MeshShader>) {
         self.primitives
             .iter()
             .for_each(|(material, primitive)| unsafe {
-                primitive.bind();
-                gl::DrawElements(
-                    primitive.primitive_type(),
-                    primitive.count() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
+                primitive.render();
             });
     }
 }
 
-impl<Vertex: BufferElement, Geometry: IndexGeometry, Material: Default> Default
-    for Mesh<Vertex, Geometry, Material>
-{
+impl Default for Mesh {
     fn default() -> Self {
-        let primitive = Primitive::sphere(1.0, 5);
-        let mat = Material::default();
+        let primitive = Primitive::<PTNVertex, TriangleGeometry>::sphere(1.0, 5);
+        let mat = PhongMaterial::default();
         return Mesh {
             primitives: vec![(mat, primitive)],
         };

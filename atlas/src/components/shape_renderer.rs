@@ -16,14 +16,14 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct SpriteRenderer {
-    mesh: Primitive<P2TVertex, TriangleGeometry>,
+    quad: Primitive<P2TVertex, TriangleGeometry>,
     material: SpriteMaterial,
 }
 
 impl SpriteRenderer {
     pub fn quad((width, height): (f32, f32), material: SpriteMaterial) -> SpriteRenderer {
         SpriteRenderer {
-            mesh: Primitive::quad(width, height),
+            quad: Primitive::<P2TVertex, TriangleGeometry>::quad(width, height),
             material,
         }
     }

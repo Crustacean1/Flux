@@ -1,32 +1,27 @@
+use core::ffi;
+use std::{ops::Range, ptr};
+
 use glad_gl::gl;
 
-use super::vertices::{
-    buffer::Buffer,
-    layouts::{BufferElement, IndexGeometry},
-    Shapely,
-};
+use super::vertices::{buffer::Buffer, layouts::BufferElement, Shapely};
 
 #[derive(Clone)]
-pub struct Primitive<Vertex: BufferElement, Index: IndexGeometry> {
+pub struct Primitive<Vertex: BufferElement, Index: BufferElement> {
     vao: u32,
-    vertices: Buffer<Vertex>,
-    indices: Buffer<Index>,
+    geometry: u32,
+    pub vertices: Buffer<Vertex>,
+    pub indices: Buffer<Index>,
 }
 
-impl<Vertex: BufferElement, Geometry: IndexGeometry> Default for Primitive<Vertex, Geometry> {
-    fn default() -> Self {
-        Self::sphere(1.0, 10)
-    }
-}
-
-impl<Vertex: BufferElement, Geometry: IndexGeometry> Primitive<Vertex, Geometry> {
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<Geometry>) -> Self {
+impl<Vertex: BufferElement, Index: BufferElement> Primitive<Vertex, Index> {
+    pub fn triangles(vertices: &[Vertex], indices: &[Index]) -> Self {
         let vao = Self::create_vao();
         let vertices = Buffer::build(vertices);
         let indices = Buffer::build(indices);
 
         Self {
             vao,
+            geometry: gl::TRIANGLES,
             vertices,
             indices,
         }
@@ -35,6 +30,30 @@ impl<Vertex: BufferElement, Geometry: IndexGeometry> Primitive<Vertex, Geometry>
     pub fn bind(&self) {
         unsafe {
             gl::BindVertexArray(self.vao);
+        }
+    }
+
+    pub fn render(&self) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
+            gl::DrawElements(
+                self.geometry,
+                self.indices.count() as i32,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+            );
+        }
+    }
+
+    pub fn render_sub(&self, range: Range<u32>) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
+            gl::DrawElements(
+                self.geometry,
+                range.count() as i32,
+                gl::UNSIGNED_INT,
+                range.start as *const ffi::c_void,
+            );
         }
     }
 

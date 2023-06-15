@@ -7,7 +7,8 @@ use crate::{
     game_root::GameError,
     graphics::{
         primitive::Primitive,
-        texture::{ChannelLayout, Texture}, vertices::layouts::{PTNVertex, TriangleGeometry, PTVertex},
+        texture::{ChannelLayout, Texture},
+        vertices::layouts::{P2TVertex, PTVertex, TriangleGeometry},
     },
 };
 
@@ -34,7 +35,7 @@ impl Default for Font {
 }
 
 impl Font {
-    pub fn render(&self, text: &str, target: &mut Primitive<PTVertex, TriangleGeometry>) {
+    pub fn render(&self, text: &str, target: &mut Primitive<P2TVertex, TriangleGeometry>) {
         let (mut x, y) = (0.0, 0.0);
         let char_quads: Vec<_> = text
             .bytes()
@@ -62,13 +63,12 @@ impl Font {
                 x += (glyph.advance >> 6) as f32;
 
                 Some([
-                    [x1, y1, u1, v1],
-                    [x2, y1, u2, v1],
-                    [x2, y2, u2, v2],
-                    [x1, y2, u1, v2],
+                    P2TVertex([x1, y1], [u1, v1]),
+                    P2TVertex([x2, y1], [u2, v1]),
+                    P2TVertex([x2, y2], [u2, v2]),
+                    P2TVertex([x1, y2], [u1, v2]),
                 ])
             })
-            .flatten()
             .flatten()
             .collect();
 
@@ -78,25 +78,21 @@ impl Font {
             .map(|(i, _)| {
                 let i = i as u32;
                 [
-                    i * 4 + 0,
-                    i * 4 + 1,
-                    i * 4 + 2,
-                    i * 4 + 2,
-                    i * 4 + 3,
-                    i * 4 + 0,
+                    TriangleGeometry([i * 4 + 0, i * 4 + 1, i * 4 + 2]),
+                    TriangleGeometry([i * 4 + 2, i * 4 + 3, i * 4 + 0]),
                 ]
             })
             .flatten()
             .collect();
 
-        target.reload_vertices(&char_quads);
-        target.reload_indices(&char_quads_indices);
+        target.vertices.load(&char_quads);
+        target.indices.load(&char_quads_indices);
     }
 
     pub fn bind(&self) {
-        unsafe { 
+        unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
-            self.texture.bind() 
+            self.texture.bind()
         }
     }
 }
