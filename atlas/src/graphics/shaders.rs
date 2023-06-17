@@ -2,6 +2,7 @@ pub mod mesh_shader;
 pub mod skybox_shader;
 pub mod text_shader;
 pub mod ui_shader;
+pub mod particle_shader;
 
 use glad_gl::gl;
 use glam::Vec3;

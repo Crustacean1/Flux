@@ -10,8 +10,8 @@ use glad_gl::gl;
 use crate::{
     game_root::GameError,
     graphics::shaders::{
-        mesh_shader::MeshShader, skybox_shader::SkyboxShader, text_shader::TextShader,
-        ui_shader::SpriteShader, Shader, ShaderProgram, ShaderType,
+        mesh_shader::MeshShader, particle_shader::ParticleShader, skybox_shader::SkyboxShader,
+        text_shader::TextShader, ui_shader::SpriteShader, Shader, ShaderProgram, ShaderType,
     },
 };
 
@@ -158,7 +158,15 @@ impl ShaderUnit {
 
 pub fn load_shader(res_id: &str, ext: &str, path: &PathBuf, res_man: &mut SceneResourceManager) {
     if let Ok(shader_files) = fs::read_dir(path) {
-        if !["mesh_shader", "ui_shader", "sky_shader", "text_shader"].contains(&ext) {
+        if ![
+            "mesh_shader",
+            "ui_shader",
+            "sky_shader",
+            "text_shader",
+            "particle_shader",
+        ]
+        .contains(&ext)
+        {
             return;
         }
 
@@ -203,6 +211,10 @@ fn link_shader(
         "text_shader" => res_man.register(
             res_id,
             ShaderUnit::link::<TextShader>(res_id, &shader_units)?,
+        ),
+        "particle_shader" => res_man.register(
+            res_id,
+            ShaderUnit::link::<ParticleShader>(res_id, &shader_units)?,
         ),
         _ => {}
     };

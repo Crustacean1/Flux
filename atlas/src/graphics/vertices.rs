@@ -3,7 +3,9 @@ use glad_gl::gl;
 pub mod base_vertices;
 pub mod buffer;
 pub mod generator;
+pub mod indices;
 pub mod layouts;
+pub mod skybox;
 
 pub enum PrimitiveType {
     Points,

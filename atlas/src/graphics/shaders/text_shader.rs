@@ -1,3 +1,5 @@
+use glad_gl::gl;
+
 use crate::game_root::GameError;
 
 use super::{Shader, ShaderProgram};
@@ -5,6 +7,7 @@ use super::{Shader, ShaderProgram};
 #[derive(Clone)]
 pub struct TextShader {
     projection_view_model_uniform: i32,
+    atlas_uniform: i32,
 }
 
 impl ShaderProgram<TextShader> {
@@ -15,14 +18,23 @@ impl ShaderProgram<TextShader> {
             self.shader.projection_view_model_uniform,
         )
     }
+
+    pub fn bind_atlas(&mut self, atlas: i32) {
+        unsafe {
+            gl::Uniform1i(self.shader.atlas_uniform, atlas);
+        }
+    }
 }
 
 impl Shader<TextShader> for TextShader {
     fn build(shader_id: u32) -> Result<TextShader, GameError> {
         let projection_view_model_uniform =
             ShaderProgram::<Self>::get_location(shader_id, "projection_view_model\0")?;
+        let atlas_uniform = ShaderProgram::<Self>::get_location(shader_id, "atlas\0")?;
+
         Ok(Self {
             projection_view_model_uniform,
+            atlas_uniform,
         })
     }
 }

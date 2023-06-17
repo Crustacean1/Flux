@@ -1,5 +1,4 @@
-use glad_gl::gl;
-use std::ptr;
+use glam::{Mat4, Vec3};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -7,7 +6,7 @@ use crate::{
     graphics::{
         primitive::Primitive,
         shaders::{text_shader::TextShader, ShaderProgram},
-        vertices::layouts::{P2TVertex, PTVertex, TriangleGeometry},
+        vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
     resource_manager::font::Font,
 };
@@ -15,14 +14,12 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
-    shader_program: ShaderProgram<TextShader>,
+    shader: ShaderProgram<TextShader>,
 }
 
 impl TextRendererSystem {
     pub fn new(shader: ShaderProgram<TextShader>) -> Self {
-        TextRendererSystem {
-            shader_program: shader,
-        }
+        TextRendererSystem { shader }
     }
 }
 
@@ -34,7 +31,7 @@ pub struct TextRenderer {
 
 impl TextRenderer {
     pub fn new(text: &str, font: Font) -> Self {
-        let mut primitive = Primitive::triangles(&vec![], &vec![]);
+        let mut primitive = Primitive::new(&vec![], &vec![]);
         font.render(text, &mut primitive);
 
         TextRenderer {
@@ -65,23 +62,18 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for E
 
 impl TextRendererSystem {
     pub fn render(&mut self, entity_manager: &EntityManager, camera: &Camera) {
-        self.shader_program.bind();
+        self.shader.bind();
+
         entity_manager.get_view().for_each(
-            |(transform, text_renderer): (&Transform, &TextRenderer)| unsafe {
+            |(transform, text_renderer): (&Transform, &TextRenderer)| {
                 let projection_view_model = camera.projection() * transform.model();
-                let primitive = text_renderer.primitive();
 
-                primitive.bind();
                 text_renderer.font.bind();
-                self.shader_program
+                self.shader
                     .bind_projection_view_model(&projection_view_model.to_cols_array());
+                self.shader.bind_atlas(0);
 
-                gl::DrawElements(
-                    primitive.primitive_type(),
-                    primitive.count() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
+                text_renderer.primitive().render();
             },
         );
     }

@@ -1,4 +1,3 @@
-#![feature(generic_const_exprs)]
 extern crate freetype;
 
 pub mod components;

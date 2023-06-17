@@ -3,12 +3,13 @@ pub mod button_trigger;
 pub mod camera;
 pub mod controller;
 pub mod mesh_renderer;
-pub mod particle_emmiter;
+pub mod particle_emitter;
 pub mod physical_body;
 pub mod shape_renderer;
 pub mod skybox_renderer;
 pub mod text_renderer;
 pub mod transform;
+pub mod particle_renderer;
 
 pub trait ComponentType {
     fn component_type_id() -> usize;

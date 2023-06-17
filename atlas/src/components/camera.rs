@@ -79,9 +79,9 @@ impl Camera {
         let mut proj = Mat4::IDENTITY;
 
         *proj.col_mut(0) = Vec4::new(2.0 / width, 0.0, 0.0, 0.0);
-        *proj.col_mut(1) = Vec4::new(0.0, 2.0 / height, 0.0, 0.0);
+        *proj.col_mut(1) = Vec4::new(0.0, -2.0 / height, 0.0, 0.0);
         *proj.col_mut(2) = Vec4::new(0.0, 0.0, 0.0, 0.0);
-        *proj.col_mut(3) = Vec4::new(1.0, 1.0, 0.0, 1.0);
+        *proj.col_mut(3) = Vec4::new(-1., 1., 0.0, 1.0);
 
         proj
     }

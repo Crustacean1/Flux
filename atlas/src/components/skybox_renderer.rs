@@ -1,4 +1,3 @@
-
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::space_box::SpaceBox,
@@ -6,7 +5,7 @@ use crate::{
         material::{skybox_material::SkyboxMaterial, Material},
         primitive::Primitive,
         shaders::{skybox_shader::SkyboxShader, ShaderProgram},
-        vertices::layouts::{PTVertex, TriangleGeometry},
+        vertices::{generator, indices::TriangleGeometry, layouts::PTVertex, skybox},
     },
 };
 
@@ -23,9 +22,11 @@ pub struct SkyboxRendererSystem {
 
 impl SkyboxRenderer {
     pub fn new(size: f32, material: SkyboxMaterial) -> Self {
-        let mesh = Primitive::skybox(size);
-
-        SkyboxRenderer { mesh, material }
+        let (vertices, indices) = skybox::skybox(size);
+        SkyboxRenderer {
+            mesh: Primitive::new(&vertices, &indices),
+            material,
+        }
     }
 }
 
@@ -47,26 +48,23 @@ impl SkyboxRendererSystem {
         camera: &Camera,
         camera_transform: &Transform,
     ) {
-        unsafe {
-            self.shader.bind();
-            entity_manager
-                .get_view()
-                .for_each(|skybox: &SkyboxRenderer| {
-                    skybox.mesh.bind();
-                    skybox.material.bind();
+        self.shader.bind();
+        entity_manager
+            .get_view()
+            .for_each(|skybox: &SkyboxRenderer| {
+                skybox.material.bind();
 
-                    let (projection, view) = camera.projection_view(camera_transform);
-                    //let projection_view = projection * view;
+                let (projection, view) = camera.projection_view(camera_transform);
 
-                    self.shader
-                        .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
+                self.shader
+                    .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
 
-                    (0..6).for_each(|i| {
-                        self.shader.bind_billboard(i as i32);
-                        skybox.mesh.render_sub((i * 6)..(i * 6 + 6));
-                    });
+                (2..6).for_each(|i| {
+                    self.shader.bind_billboard(i as i32);
+                    let (start, end) = (i * 6, i * 6 + 6);
+                    skybox.mesh.render_sub(start..end);
                 });
-        }
+            });
     }
 
     pub fn new(shader: ShaderProgram<SkyboxShader>) -> Self {

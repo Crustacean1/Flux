@@ -6,3 +6,4 @@ pub mod vertices;
 pub mod texture;
 pub mod primitive;
 pub mod lights;
+pub mod instanced_primitive;

@@ -1,11 +1,12 @@
 use atlas::{
     components::{
-        physical_body::PhysicalBody, skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer,
-        transform::Transform,
+        particle_emitter::ParticleEmitter, physical_body::PhysicalBody,
+        skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer, transform::Transform,
     },
     entity_manager::{EntityManager, EntityManagerTrait},
     game_entities::{
-        enemy_ship::EnemyShip, space_box::SpaceBox, starlight::Starlight, ui_label::UiLabel,
+        enemy_ship::EnemyShip, space_box::SpaceBox, starlight::Starlight,
+        thruster::ParticleEmitterEntity, ui_label::UiLabel,
     },
     game_root::GameError,
     graphics::{
@@ -29,7 +30,7 @@ pub fn asteroids(
 
     let meshes = ["spaceship3"];
 
-    let meshes: Vec<Mesh<MeshShader, PhongMaterial>> = meshes
+    let meshes: Vec<Mesh> = meshes
         .iter()
         .map(|mesh| {
             return resource_manager.get(mesh).res;
@@ -69,8 +70,17 @@ pub fn asteroids(
         ),
     });
 
-    entity_manager.add(UiLabel {
-        renderer: TextRenderer::new("Velocity: 18.31 [m/s]", font),
+    entity_manager.add_at(
+        UiLabel {
+            renderer: TextRenderer::new("Velocity: 18.31 [m/s]", font),
+        },
+        Transform::pos(Vec3::new(50., 50., 0.0)),
+    );
+
+    let particle_material = resource_manager.get("thruster").res;
+
+    entity_manager.add(ParticleEmitterEntity {
+        emitter: ParticleEmitter::new(particle_material, 1),
     });
 
     entity_manager.add(SpaceBox { renderer: skybox });

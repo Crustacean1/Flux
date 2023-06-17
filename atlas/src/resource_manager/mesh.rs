@@ -10,7 +10,12 @@ use gltf::{
     Gltf,
 };
 
-use crate::graphics::{material::phong_material::PhongMaterial, mesh::Mesh, primitive::Primitive};
+use crate::graphics::{
+    material::phong_material::PhongMaterial,
+    mesh::Mesh,
+    primitive::Primitive,
+    vertices::{indices::TriangleGeometry, layouts::PTNVertex},
+};
 
 use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
 
@@ -87,16 +92,14 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh {
                         let vertices: Vec<_> = positions
                             .zip(tex_coords)
                             .zip(normals)
-                            .map(|((pos, tex), norm)| {
-                                [
-                                    pos[0], pos[1], pos[2], tex[0], tex[1], norm[0], norm[1],
-                                    norm[2],
-                                ]
-                            })
-                            .flatten()
+                            .map(|((pos, tex), norm)| PTNVertex(pos, tex, norm))
                             .collect();
 
                         let indices: Vec<_> = indices.collect();
+                        let indices: Vec<_> = indices
+                            .chunks(3)
+                            .filter_map(|chunk| Some(TriangleGeometry(chunk.try_into().ok()?)))
+                            .collect();
 
                         let material = if let Some(material) = primitive.material().index() {
                             materials[material].clone()
@@ -104,7 +107,7 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh {
                             PhongMaterial::default()
                         };
 
-                        Some((material, Primitive::new(&vertices, indices.into())))
+                        Some((material, Primitive::new(&vertices, &indices)))
                     })
                     .collect(),
             )

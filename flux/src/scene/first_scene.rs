@@ -4,6 +4,7 @@ use atlas::{
     components::{
         camera::{Camera, Frustrum},
         mesh_renderer::MeshRendererSystem,
+        particle_renderer::ParticleRenderer,
         physical_body::PhysicalBody,
         skybox_renderer::SkyboxRendererSystem,
         text_renderer::TextRendererSystem,
@@ -26,6 +27,7 @@ pub struct FirstScene {
     ui_camera: Camera,
     entity_manager: EntityManager,
 
+    particle_renderer: ParticleRenderer,
     text_renderer: TextRendererSystem,
     mesh_renderer: MeshRendererSystem,
     skybox_renderer: SkyboxRendererSystem,
@@ -78,6 +80,7 @@ impl FirstScene {
             player_controller,
             physical_simulation,
             text_renderer,
+            particle_renderer,
             event_sender,
             event_reader,
         ) = Self::create_systems(&mut resource_manager)?;
@@ -116,6 +119,7 @@ impl FirstScene {
             entity_manager,
             mesh_renderer,
             skybox_renderer,
+            particle_renderer,
             text_renderer,
             player_controller,
             physical_simulation,
@@ -150,6 +154,7 @@ impl FirstScene {
             PlayerController,
             PhysicalSimulation,
             TextRendererSystem,
+            ParticleRenderer,
             EventSender,
             EventReader,
         ),
@@ -158,12 +163,14 @@ impl FirstScene {
         let text_shader = resource_manager.get("basic").res;
         let phong_shader = resource_manager.get("phong").res;
         let skybox_shader = resource_manager.get("basic").res;
+        let particle_shader = resource_manager.get("flat").res;
 
         let mesh_renderer = MeshRendererSystem::new(phong_shader);
         let skybox_renderer = SkyboxRendererSystem::new(skybox_shader);
         let player_controller = PlayerController::new();
         let physical_simulation = PhysicalSimulation::new(1.0 / 120.0);
         let text_system = TextRendererSystem::new(text_shader);
+        let particle_renderer = ParticleRenderer::new(particle_shader);
 
         let event_sender = EventSender::new();
         let event_reader = EventReader::new();
@@ -174,6 +181,7 @@ impl FirstScene {
             player_controller,
             physical_simulation,
             text_system,
+            particle_renderer,
             event_sender,
             event_reader,
         ))
@@ -185,8 +193,13 @@ impl FirstScene {
             self.skybox_renderer
                 .render(&self.entity_manager, camera, camera_transform);
             context.depth_write(true);
+
             self.mesh_renderer
                 .render(&self.entity_manager, camera, camera_transform);
+
+            self.particle_renderer
+                .render(&self.entity_manager, camera, camera_transform);
+
             self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);
         }

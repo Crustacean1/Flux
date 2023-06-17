@@ -1,7 +1,3 @@
-use std::ptr;
-
-use glad_gl::gl;
-
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::sprite::Sprite,
@@ -9,7 +5,7 @@ use crate::{
         material::{sprite_material::SpriteMaterial, Material},
         primitive::Primitive,
         shaders::{ui_shader::SpriteShader, ShaderProgram},
-        vertices::layouts::{P2TVertex, TriangleGeometry},
+        vertices::{generator, indices::TriangleGeometry, layouts::P2TVertex},
     },
 };
 
@@ -22,8 +18,9 @@ pub struct SpriteRenderer {
 
 impl SpriteRenderer {
     pub fn quad((width, height): (f32, f32), material: SpriteMaterial) -> SpriteRenderer {
+        let (vertices, indices) = generator::quad(width, height);
         SpriteRenderer {
-            quad: Primitive::<P2TVertex, TriangleGeometry>::quad(width, height),
+            quad: Primitive::new(&vertices, &indices),
             material,
         }
     }
@@ -50,24 +47,15 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a SpriteRenderer)> for
 
 impl SpriteRendererSystem {
     pub fn render(&self, entity_manager: &EntityManager, camera: &Camera) {
-        unsafe {
-            let projection = camera.projection();
-            entity_manager.get_view().for_each(
-                |(transform, shape): (&Transform, &SpriteRenderer)| {
-                    shape.material.bind();
-                    shape.mesh.bind();
+        let projection = camera.projection();
+        entity_manager
+            .get_view()
+            .for_each(|(transform, shape): (&Transform, &SpriteRenderer)| {
+                shape.material.bind();
+                let mvp = projection * transform.model();
+                self.shader.bind_projection_view_model(&mvp.to_cols_array());
 
-                    let mvp = projection * transform.model();
-                    self.shader.bind_projection_view_model(&mvp.to_cols_array());
-
-                    gl::DrawElements(
-                        shape.mesh.primitive_type(),
-                        shape.mesh.count() as i32,
-                        gl::UNSIGNED_INT,
-                        ptr::null(),
-                    );
-                },
-            );
-        }
+                shape.quad.render();
+            });
     }
 }

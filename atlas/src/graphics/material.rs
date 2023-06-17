@@ -1,6 +1,7 @@
 pub mod phong_material;
 pub mod skybox_material;
 pub mod sprite_material;
+pub mod particle_material;
 
 use std::path::PathBuf;
 

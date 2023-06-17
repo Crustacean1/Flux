@@ -84,7 +84,7 @@ impl GraphicsContext {
 
         unsafe {
             gl::ClearColor(0., 0., 0., 1.0);
-            gl::PointSize(2.0);
+            gl::PointSize(10.0);
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable(gl::DEPTH_TEST);

@@ -8,7 +8,7 @@ use crate::{
     graphics::{
         primitive::Primitive,
         texture::{ChannelLayout, Texture},
-        vertices::layouts::{P2TVertex, PTVertex, TriangleGeometry},
+        vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
 };
 
@@ -45,13 +45,6 @@ impl Font {
                 let (rows, columns) = (8, 16);
                 let (column, row) = (char % columns, char / columns);
 
-                if char == 106 {
-                    println!(
-                        "Size: {} {} pos: {} {} bearing: {} {}",
-                        glyph.size.0, glyph.size.1, x, y, glyph.bearing.0, glyph.bearing.1
-                    );
-                }
-
                 let (x1, y1) = (x + glyph.bearing.0 as f32, y - glyph.bearing.1 as f32);
                 let (x2, y2) = (x1 + glyph.size.0 as f32, y1 + glyph.size.1 as f32);
                 let (u1, v1) = (column as f32 / columns as f32, row as f32 / rows as f32);
@@ -76,17 +69,17 @@ impl Font {
             .bytes()
             .enumerate()
             .map(|(i, _)| {
-                let i = i as u32;
+                let offset = i as u32 * 4;
                 [
-                    TriangleGeometry([i * 4 + 0, i * 4 + 1, i * 4 + 2]),
-                    TriangleGeometry([i * 4 + 2, i * 4 + 3, i * 4 + 0]),
+                    TriangleGeometry([offset + 0, offset + 1, offset + 2]),
+                    TriangleGeometry([offset + 2, offset + 3, offset + 0]),
                 ]
             })
             .flatten()
             .collect();
 
-        target.vertices.load(&char_quads);
-        target.indices.load(&char_quads_indices);
+        target.load_vertices(&char_quads);
+        target.load_indices(&char_quads_indices);
     }
 
     pub fn bind(&self) {

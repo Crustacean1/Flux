@@ -1,0 +1,11 @@
+#version 420 core
+
+in vec2 vTex;
+
+out vec4 fCol;
+
+uniform sampler2D sampler;
+
+void main(){
+    fCol = vec4(texture(sampler, vTex));
+}
