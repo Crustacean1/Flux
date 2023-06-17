@@ -4,12 +4,12 @@ use atlas::{
         shape_renderer::SpriteRenderer, transform::Transform,
     },
     entity_manager::{EntityManager, EntityManagerTrait},
-    event_bus::EventSenderTrait,
     game_root::GameError,
+    graphics::material::sprite_material::SpriteMaterial,
     resource_manager::{
         resource::Resource, scene_resource_manager::SceneResourceManager, ResourceManager,
     },
-    scene::SceneEvent, graphics::material::sprite_material::SpriteMaterial,
+    scene::SceneEvent,
 };
 use glam::Vec3;
 
@@ -57,7 +57,7 @@ impl PlayHandler {
 
 impl ButtonHandler for PlayHandler {
     fn on_click(&self, event_sender: &mut atlas::event_bus::EventSender) {
-        event_sender.send(SceneEvent::NewScene("first_scene"))
+        event_sender.write(SceneEvent::NewScene("first_scene"))
     }
 }
 

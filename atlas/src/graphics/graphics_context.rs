@@ -3,11 +3,7 @@ use std::sync::mpsc::Receiver;
 use glad_gl::gl;
 use glfw::{Action, Context, Glfw, InitError, WindowEvent};
 
-use crate::{
-    event_bus::{EventSender, EventSenderTrait},
-    game_root::GameError,
-    scene::SceneEvent,
-};
+use crate::{event_bus::EventSender, game_root::GameError, scene::SceneEvent};
 
 pub struct GraphicsContext {
     title: String,
@@ -80,6 +76,8 @@ impl GraphicsContext {
         window.set_mouse_button_polling(true);
         window.set_key_polling(true);
 
+        glfw.set_swap_interval(glfw::SwapInterval::None);
+
         gl::load(|e| glfw.get_proc_address_raw(e) as *const std::os::raw::c_void);
 
         unsafe {
@@ -105,30 +103,30 @@ impl GraphicsContext {
         glfw::flush_messages(&self.event_channel).for_each(|(_time, event)| match event {
             WindowEvent::CursorPos(x, y) => {
                 let (prev_x, prev_y) = self.tracked_mouse_pos;
-                event_sender.send(IoEvent::MouseMotion((x as f32 - prev_x, y as f32 - prev_y)));
+                event_sender.write(IoEvent::MouseMotion((x as f32 - prev_x, y as f32 - prev_y)));
                 self.tracked_mouse_pos = (x as f32, y as f32);
-                event_sender.send(IoEvent::MousePositionChange((x as f32, y as f32)));
+                event_sender.write(IoEvent::MousePositionChange((x as f32, y as f32)));
             }
             WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Press, _) => {
-                event_sender.send(IoEvent::LeftMousePress(self.tracked_mouse_pos));
+                event_sender.write(IoEvent::LeftMousePress(self.tracked_mouse_pos));
             }
             WindowEvent::MouseButton(glfw::MouseButton::Button2, glfw::Action::Press, _) => {
-                event_sender.send(IoEvent::RightMousePress(self.tracked_mouse_pos));
+                event_sender.write(IoEvent::RightMousePress(self.tracked_mouse_pos));
             }
             WindowEvent::Close => {
-                event_sender.send(SceneEvent::Exit);
+                event_sender.write(SceneEvent::Exit);
             }
             WindowEvent::Size(width, height) => {
-                event_sender.send(ContextEvent::Resized(width, height));
+                event_sender.write(ContextEvent::Resized(width, height));
             }
             WindowEvent::Key(glfw::Key::Escape, _, Action::Release, _) => {
-                event_sender.send(ContextEvent::Close);
+                event_sender.write(ContextEvent::Close);
             }
             WindowEvent::Key(key, _, Action::Press, _) => {
-                event_sender.send(IoEvent::KeyPressed(key as u8 as char));
+                event_sender.write(IoEvent::KeyPressed(key as u8 as char));
             }
             WindowEvent::Key(key, _, Action::Release, _) => {
-                event_sender.send(IoEvent::KeyReleased(key as u8 as char));
+                event_sender.write(IoEvent::KeyReleased(key as u8 as char));
             }
             _ => {}
         });

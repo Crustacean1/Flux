@@ -1,6 +1,5 @@
-use std::ptr;
-
 use glad_gl::gl;
+use std::ptr;
 
 use super::{
     primitive::Primitive,
@@ -11,6 +10,7 @@ use super::{
     },
 };
 
+#[derive(Clone)]
 pub struct InstancedPrimitive<
     InstancedData: BufferElement,
     Vertex: BufferElement,
@@ -20,17 +20,17 @@ pub struct InstancedPrimitive<
     instanced_buffer: Buffer<InstancedData>,
 }
 
-impl<InstancedData: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
-    InstancedPrimitive<InstancedData, Vertex, Index>
+impl<Instance: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
+    InstancedPrimitive<Instance, Vertex, Index>
 {
-    pub fn new(vertices: &[Vertex], indices: &[Index], data: &[InstancedData]) -> Self {
+    pub fn new(vertices: &[Vertex], indices: &[Index], data: &[Instance]) -> Self {
         let primitive = Primitive::new(vertices, indices);
         let instanced_buffer = Buffer::build(data, BufferTarget::Vertex);
         let start_attrib = Vertex::layout().len();
 
         primitive.use_vao(|| {
             instanced_buffer.bind();
-            Primitive::<Vertex, Index>::declare_layout(&InstancedData::layout(), start_attrib, 1);
+            Primitive::<Vertex, Index>::declare_layout(&Instance::layout(), start_attrib, 1);
         });
 
         Self {
@@ -51,5 +51,9 @@ impl<InstancedData: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
                 )
             })
         }
+    }
+
+    pub fn load_instances(&mut self, instances: &[Instance]) {
+        self.instanced_buffer.reload(instances);
     }
 }

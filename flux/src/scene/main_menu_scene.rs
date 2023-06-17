@@ -7,7 +7,7 @@ use atlas::{
         shape_renderer::SpriteRendererSystem,
     },
     entity_manager::EntityManager,
-    event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
+    event_bus::{create_event_queue, EventReader, EventSender},
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
@@ -44,7 +44,7 @@ impl Scene for MainMenuScene {
 
             self.button_system.check_buttons(
                 &mut self.entity_manager,
-                &self.event_reader,
+                &mut self.event_reader,
                 &mut self.event_sender,
             );
 
@@ -54,8 +54,6 @@ impl Scene for MainMenuScene {
             if let Some(scene_action) = self.get_scene_action() {
                 return scene_action;
             }
-
-            swap_event_buffers(&mut self.event_reader, &mut self.event_sender)
         }
     }
 }
@@ -64,23 +62,21 @@ impl MainMenuScene {
     fn poll_events(&mut self, graphics_context: &mut GraphicsContext) {
         graphics_context.poll_events(&mut self.event_sender);
 
-        self.event_reader
-            .read()
-            .iter()
-            .for_each(|event| match event {
+        self.event_reader.read().map(|event| {
+            event.for_each(|event| match event {
                 ContextEvent::Resized(width, height) => {
-                    graphics_context.set_viewport(*width, *height);
+                    graphics_context.set_viewport(width, height);
                     /*self.camera
                     .new(Frustrum::orthogonal(*width as f32, *height as f32));*/
                 }
                 _ => {}
             })
+        });
     }
 
-    fn get_scene_action(&self) -> Option<SceneEvent> {
+    fn get_scene_action(&mut self) -> Option<SceneEvent> {
         self.event_reader
-            .read()
-            .iter()
+            .read()?
             .fold(None, |action, event| match event {
                 SceneEvent::NewScene(new_scene) => Some(SceneEvent::NewScene(new_scene)),
                 SceneEvent::Exit => Some(SceneEvent::Exit),
@@ -103,6 +99,8 @@ impl MainMenuScene {
 
         let (width, height) = graphics_context.dimensions();
 
+        let (event_sender, event_reader) = create_event_queue();
+
         let main_scene = MainMenuScene {
             camera: Camera::new(
                 Frustrum::orthogonal(width as f32, height as f32),
@@ -112,8 +110,8 @@ impl MainMenuScene {
             resource_manager,
             shape_rendering_system,
             button_system: ButtonTriggerSystem::new(),
-            event_sender: EventSender::new(),
-            event_reader: EventReader::new(),
+            event_sender,
+            event_reader,
         };
 
         Ok(Box::new(main_scene))

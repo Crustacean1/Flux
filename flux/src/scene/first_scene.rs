@@ -5,27 +5,37 @@ use atlas::{
         camera::{Camera, Frustrum},
         mesh_renderer::MeshRendererSystem,
         particle_renderer::ParticleRenderer,
-        physical_body::PhysicalBody,
         skybox_renderer::SkyboxRendererSystem,
-        text_renderer::TextRendererSystem,
+        text_renderer::{TextRenderer, TextRendererSystem},
         transform::Transform,
     },
     entity_manager::EntityManager,
-    event_bus::{swap_event_buffers, EventReader, EventReaderTrait, EventSender},
-    game_entities::{player_ship::PlayerShip, GameEntity},
+    event_bus::{create_event_queue, EventReader, EventSender},
+    game_entities::{player_ship::PlayerShip, ui_label::UiLabel, GameEntity},
     game_root::GameError,
     graphics::graphics_context::{ContextEvent, GraphicsContext},
-    resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
+    resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
-    systems::{physical_simulation::PhysicalSimulation, player_controller::PlayerController},
+    systems::{
+        particle_system::update_particles,
+        physical_simulation::PhysicalSimulation,
+        player_controller::PlayerController,
+        text_update::{update_text, TextChangeEvent},
+    },
 };
-use glam::{Quat, Vec3};
+use glam::Vec3;
 
 use crate::game_objects::asteroids::asteroids;
+
+pub enum GameEvent {
+    ShootPlasmaBullet,
+    RemoveEntity(usize),
+}
 
 pub struct FirstScene {
     ui_camera: Camera,
     entity_manager: EntityManager,
+    resource_manager: SceneResourceManager,
 
     particle_renderer: ParticleRenderer,
     text_renderer: TextRendererSystem,
@@ -42,28 +52,50 @@ impl Scene for FirstScene {
     fn run(
         &mut self,
         graphics_context: &mut atlas::graphics::graphics_context::GraphicsContext,
-    ) -> atlas::scene::SceneEvent {
-        let (mut now, mut prev) = (Instant::now(), Instant::now());
+    ) -> SceneEvent {
+        let font: Font = self.resource_manager.get("main").res;
+        let fps_counter_label = self.entity_manager.add_at(
+            UiLabel {
+                renderer: TextRenderer::new("", font),
+            },
+            Transform::pos(Vec3::new(50., 50., 0.0)),
+        );
+
+        let (mut now, mut prev, mut prev_phys) = (Instant::now(), Instant::now(), Instant::now());
+        let mut fps = 0.0;
+
         loop {
+            prev = now;
             now = Instant::now();
+
+            fps = fps * 0.9 + 0.1 * (1_000_000_000.0 / (now - prev).as_nanos() as f32);
+            self.event_sender.write(TextChangeEvent::TextChange(
+                fps_counter_label,
+                format!("FPS: {}", fps),
+            ));
 
             self.render(graphics_context);
 
-            self.player_controller
-                .control(&mut self.entity_manager, &self.event_reader);
+            update_particles(&mut self.entity_manager, (now - prev).as_nanos());
+            update_text(&mut self.entity_manager, &mut self.event_reader);
+
+            self.player_controller.control(
+                &mut self.entity_manager,
+                &mut self.event_reader,
+                &mut self.event_sender,
+            );
             graphics_context.display();
 
-            if (now - prev).as_nanos() > self.physical_simulation.delta() {
+            if (now - prev_phys).as_nanos() > self.physical_simulation.delta() {
                 self.physical_simulation
                     .integrate_movement(&mut self.entity_manager);
-                prev = now;
+                prev_phys = now;
             }
 
             self.poll_events(graphics_context);
-            swap_event_buffers(&mut self.event_reader, &mut self.event_sender);
 
-            if let Some(action) = self.process_events(graphics_context) {
-                return action;
+            if let Some(result) = self.process_events(graphics_context) {
+                return result;
             }
         }
     }
@@ -89,24 +121,6 @@ impl FirstScene {
 
         asteroids(&mut entity_manager, &mut resource_manager)?;
 
-        let camera = Camera::new(
-            Frustrum::perspective(width as f32, height as f32, 0.1, 100.0),
-            Vec3::new(0.0, 1.0, 3.0),
-        );
-
-        entity_manager.add_at(
-            PlayerShip {
-                camera,
-                physical_body: PhysicalBody::new(10., 10.),
-                mesh: resource_manager.get("spaceship3").res,
-            },
-            Transform {
-                position: Vec3::new(0.0, 0.0, 0.0),
-                scale: Vec3::new(1.0, 1.0, 1.0),
-                rotation: Quat::IDENTITY,
-            },
-        );
-
         let ui_camera = Camera::new(
             Frustrum::orthogonal(width as f32, height as f32),
             Vec3::new(0.0, 0.0, 0.0),
@@ -117,6 +131,7 @@ impl FirstScene {
         Ok(Box::new(FirstScene {
             ui_camera,
             entity_manager,
+            resource_manager,
             mesh_renderer,
             skybox_renderer,
             particle_renderer,
@@ -134,11 +149,10 @@ impl FirstScene {
 
     fn process_events(&mut self, graphics_context: &mut GraphicsContext) -> Option<SceneEvent> {
         self.event_reader
-            .read()
-            .iter()
+            .read()?
             .fold(None, |action, event| match event {
                 ContextEvent::Resized(width, height) => {
-                    graphics_context.set_viewport(*width, *height);
+                    graphics_context.set_viewport(width, height);
                     action
                 }
                 ContextEvent::Close => Some(SceneEvent::Exit),
@@ -172,8 +186,7 @@ impl FirstScene {
         let text_system = TextRendererSystem::new(text_shader);
         let particle_renderer = ParticleRenderer::new(particle_shader);
 
-        let event_sender = EventSender::new();
-        let event_reader = EventReader::new();
+        let (event_sender, event_reader) = create_event_queue();
 
         Ok((
             mesh_renderer,
@@ -197,8 +210,10 @@ impl FirstScene {
             self.mesh_renderer
                 .render(&self.entity_manager, camera, camera_transform);
 
+            context.depth_write(false);
             self.particle_renderer
                 .render(&self.entity_manager, camera, camera_transform);
+            context.depth_write(true);
 
             self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);

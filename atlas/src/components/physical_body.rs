@@ -43,6 +43,7 @@ impl PhysicalBody {
         self.momentum += self.resultant_force * delta;
         self.resultant_force = Vec3::ZERO;
         self.resultant_ang_force = Vec3::ZERO;
+        self.momentum *= 0.99;
     }
 
     pub fn add_force(&mut self, force: Vec3) {

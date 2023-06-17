@@ -1,30 +1,32 @@
 use atlas::{
     components::{
-        particle_emitter::ParticleEmitter, physical_body::PhysicalBody,
-        skybox_renderer::SkyboxRenderer, text_renderer::TextRenderer, transform::Transform,
+        camera::{Camera, Frustrum},
+        particle_emitter::{ParticleEmitter, ParticleEmitterDefinition},
+        physical_body::PhysicalBody,
+        skybox_renderer::SkyboxRenderer,
+        transform::Transform,
     },
-    entity_manager::{EntityManager, EntityManagerTrait},
+    entity_manager::EntityManager,
     game_entities::{
-        enemy_ship::EnemyShip, space_box::SpaceBox, starlight::Starlight,
-        thruster::ParticleEmitterEntity, ui_label::UiLabel,
+        enemy_ship::EnemyShip, player_ship::PlayerShip, space_box::SpaceBox, starlight::Starlight,
     },
     game_root::GameError,
     graphics::{
+        instanced_primitive::InstancedPrimitive,
         lights::{Light, LightColor},
         material::{phong_material::PhongMaterial, skybox_material::SkyboxMaterial},
         mesh::Mesh,
-        shaders::mesh_shader::MeshShader,
+        vertices::generator,
     },
     resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
+    systems::particle_system::thruster_spawner,
 };
-use glam::Vec3;
+use glam::{Quat, Vec3};
 
 pub fn asteroids(
     entity_manager: &mut EntityManager,
     resource_manager: &mut SceneResourceManager,
 ) -> Result<(), GameError> {
-    let font: Font = resource_manager.get("main").res;
-
     let skybox_material: SkyboxMaterial = resource_manager.get("space1").res;
     let skybox = SkyboxRenderer::new(1.0, skybox_material);
 
@@ -37,25 +39,36 @@ pub fn asteroids(
         })
         .collect();
 
+    let camera = Camera::new(
+        Frustrum::perspective(1920 as f32, 1080 as f32, 0.1, 100.0),
+        Vec3::new(0.0, 1.5, 5.0),
+    );
+    let thruster = create_thruster(entity_manager, resource_manager);
+
+    entity_manager.add_at(
+        PlayerShip {
+            camera,
+            physical_body: PhysicalBody::new(10., 10.),
+            thruster,
+            mesh: resource_manager.get("spaceship3").res,
+        },
+        Transform {
+            position: Vec3::new(0.0, 0.0, 0.0),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+            rotation: Quat::IDENTITY,
+        },
+    );
+
     meshes.iter().enumerate().for_each(|(i, mesh)| {
-        let position = Vec3::new(0.0, 10.0 * i as f32, 0.0);
-        let scale = Vec3::new(1., 1., 1.);
-        let rotation = Vec3::new(0.0, 0.0, 0.0);
+        let thruster = create_thruster(entity_manager, resource_manager);
 
         entity_manager.add_at(
             EnemyShip {
                 physical_body: PhysicalBody::new(10., 10.),
+                thruster,
                 mesh: mesh.clone(),
             },
             Transform::pos(Vec3::new(0.0, 0.0, -10.0)),
-        );
-
-        entity_manager.add_at(
-            EnemyShip {
-                physical_body: PhysicalBody::new(10., 10.),
-                mesh: mesh.clone(),
-            },
-            Transform::pos(Vec3::new(0.0, 0.0, 10.0)),
         );
     });
 
@@ -70,20 +83,35 @@ pub fn asteroids(
         ),
     });
 
-    entity_manager.add_at(
-        UiLabel {
-            renderer: TextRenderer::new("Velocity: 18.31 [m/s]", font),
-        },
-        Transform::pos(Vec3::new(50., 50., 0.0)),
-    );
-
-    let particle_material = resource_manager.get("thruster").res;
-
-    entity_manager.add(ParticleEmitterEntity {
-        emitter: ParticleEmitter::new(particle_material, 1),
-    });
-
     entity_manager.add(SpaceBox { renderer: skybox });
 
     Ok(())
 }
+
+fn create_asteroids(
+    entity_manager: &mut EntityManager,
+    resource_manager: &mut SceneResourceManager,
+) {
+}
+
+fn create_thruster(
+    entity_manager: &mut EntityManager,
+    resource_manager: &mut SceneResourceManager,
+) -> ParticleEmitter {
+    let thruster_material = resource_manager.get("thruster").res;
+    let (vertices, indices) = generator::quad(1.0, 1.0);
+    let instanced_mesh = InstancedPrimitive::new(&vertices, &indices, &vec![]);
+
+    let emitter_definition = ParticleEmitterDefinition {
+        count: 1000,
+        rate: 0.005,
+    };
+
+    ParticleEmitter::new(
+        emitter_definition,
+        thruster_material,
+        instanced_mesh,
+        &thruster_spawner,
+    )
+}
+fn create_lights(entity_manager: &mut EntityManager, resource_manager: &mut SceneResourceManager) {}

@@ -6,7 +6,7 @@ pub mod space_box;
 pub mod sprite;
 pub mod starlight;
 pub mod ui_label;
-pub mod thruster;
+pub mod bullet;
 
 pub struct GameEntity<T> {
     pub entity: T,

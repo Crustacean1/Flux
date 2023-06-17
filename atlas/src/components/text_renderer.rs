@@ -48,6 +48,11 @@ impl TextRenderer {
     pub fn get_text(&self) -> String {
         self.text.clone()
     }
+
+    pub fn set_text(&mut self, text: String) {
+        self.text = text;
+        self.font.render(&self.text, &mut self.primitive);
+    }
 }
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for EntityManager {

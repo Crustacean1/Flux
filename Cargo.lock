@@ -18,6 +18,7 @@ dependencies = [
  "glfw",
  "gltf",
  "image",
+ "rand",
  "vertex_macro_derive",
 ]
 

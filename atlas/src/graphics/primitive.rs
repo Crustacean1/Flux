@@ -82,10 +82,6 @@ impl<Vertex: BufferElement, Index: IndexGeometry> Primitive<Vertex, Index> {
                 .enumerate()
                 .for_each(|(i, (attrib, offset))| {
                     let attrib_index = (attrib_start + i) as u32;
-                    println!(
-                        "Declaring: {} {} {} {}",
-                        attrib_index, attrib, offset, stride
-                    );
                     gl::EnableVertexAttribArray(attrib_index);
                     gl::VertexAttribPointer(
                         attrib_index,

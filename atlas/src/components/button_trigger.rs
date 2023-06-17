@@ -1,12 +1,10 @@
-use glam::{Vec2, Vec3};
+use glam::Vec2;
 
 use crate::{
-    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
-    event_bus::{EventReader, EventReaderTrait, EventSender},
+    entity_manager::EntityManager,
+    event_bus::{EventReader, EventSender},
     graphics::graphics_context::IoEvent,
 };
-
-use super::button_handler::ButtonHandler;
 
 pub struct Rect {
     pos: Vec2,
@@ -58,14 +56,17 @@ impl ButtonTriggerSystem {
     pub fn check_buttons<'a>(
         &self,
         entity_manager: &EntityManager,
-        event_reader: &EventReader,
+        event_reader: &mut EventReader,
         event_sender: &mut EventSender,
     ) {
-        let Some(IoEvent::LeftMousePress(click_pos)) = event_reader.read().iter().find(|e| match e {
-            IoEvent::LeftMousePress(_) => true,
-            _ => false,
-        }) else {return;};
-        Self::check_buttons_for_event(entity_manager, *click_pos, event_sender);
+        event_reader.read().map(|events| {
+            events.for_each(|e| match e {
+                IoEvent::LeftMousePress(click_pos) => {
+                    Self::check_buttons_for_event(entity_manager, click_pos, event_sender);
+                }
+                _ => {}
+            })
+        });
     }
 
     pub fn check_buttons_for_event<'a>(

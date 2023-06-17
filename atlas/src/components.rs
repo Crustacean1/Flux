@@ -10,6 +10,7 @@ pub mod skybox_renderer;
 pub mod text_renderer;
 pub mod transform;
 pub mod particle_renderer;
+pub mod collider;
 
 pub trait ComponentType {
     fn component_type_id() -> usize;

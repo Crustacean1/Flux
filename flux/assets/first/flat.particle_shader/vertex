@@ -3,16 +3,19 @@
 layout(location = 0) in vec2 pos;
 layout(location = 1) in vec2 tex;
 layout(location = 2) in vec3 instancePosition;
-layout(location = 3) in mat2 instanceTransform;
+layout(location = 3) in vec3 instanceColor;
+layout(location = 4) in mat2 instanceTransform;
 
 uniform mat4 view;
 uniform mat4 projection;
 
 out vec2 vTex;
+out vec3 vCol;
 
 void main(){
     vec4 position = view * vec4(instancePosition,1);
-    vec4 vertex = vec4(pos,0,0);
+    vec4 vertex = vec4(instanceTransform * pos,0,0);
     gl_Position = projection * (position + vertex);
     vTex = tex;
+    vCol = instanceColor;
 }
