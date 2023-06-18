@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use glad_gl::gl;
+
 use crate::{
     game_root::GameError,
     graphics::{
@@ -12,7 +14,7 @@ use super::{load_named_texture, Material};
 
 #[derive(Clone)]
 pub struct SpriteMaterial {
-    tex: Texture,
+    pub tex: Texture,
 }
 
 impl Default for SpriteMaterial {
@@ -25,15 +27,22 @@ impl Default for SpriteMaterial {
 
 impl Material for SpriteMaterial {
     type Shader = SpriteShader;
-    fn bind(&self) {
-        self.tex.bind();
+    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.tex.bind();
+        }
     }
 }
 
 impl SpriteMaterial {
     pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
-        Ok(SpriteMaterial {
-            tex: load_named_texture("texture", textures)?,
-        })
+        textures
+            .iter()
+            .next()
+            .map(|tex| SpriteMaterial {
+                tex: Texture::from_file(tex).unwrap(),
+            })
+            .ok_or(GameError::new("Failed to load sprite "))
     }
 }

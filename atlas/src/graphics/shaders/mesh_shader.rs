@@ -13,6 +13,7 @@ pub struct MeshShader {
     view_model_uniform: i32,
     directional_light_count_uniform: i32,
     directional_light_uniforms: [DirectionalLightUniform; 4],
+    material_uniform: MaterialUniform,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -21,6 +22,11 @@ struct DirectionalLightUniform {
     ambient: i32,
     diffuse: i32,
     specular: i32,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MaterialUniform {
+    diffuse: i32,
 }
 
 impl Shader<MeshShader> for MeshShader {
@@ -71,12 +77,20 @@ impl Shader<MeshShader> for MeshShader {
                 .collect::<Vec<_>>()
                 .try_into();
 
+            let material_uniform = MaterialUniform {
+                diffuse: ShaderProgram::<Self>::get_location(
+                    shader_id,
+                    &format!("material.diffuse\0"),
+                )?,
+            };
+
             let Ok(directional_light_uniforms) = directional_lights else {
                 return GameError::err(format!("Failed to find directional_lights in shader"));
             };
 
             Ok(MeshShader {
                 directional_light_uniforms,
+                material_uniform,
                 directional_light_count_uniform,
                 projection_view_model_uniform,
                 view_model_uniform,
@@ -89,16 +103,7 @@ impl ShaderProgram<MeshShader> {
     pub fn bind_diffuse(&self, diffuse: u32) {
         unsafe {
             gl::UseProgram(self.shader_id);
-            let mat_texture =
-                gl::GetUniformLocation(self.shader_id, mem::transmute("mat_texture\0".as_ptr()));
-            match mat_texture {
-                -1 => {
-                    println!("Failed to load uniform: 'mat_texture'");
-                }
-                _ => {
-                    gl::Uniform1i(mat_texture, diffuse as i32);
-                }
-            }
+            gl::Uniform1i(self.shader.material_uniform.diffuse, diffuse as i32);
         }
     }
 

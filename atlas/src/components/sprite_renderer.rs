@@ -1,6 +1,8 @@
+use glam::Vec3;
+
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
-    game_entities::sprite::Sprite,
+    game_entities::{hud::HudEntity, sprite::Sprite},
     graphics::{
         material::{sprite_material::SpriteMaterial, Material},
         primitive::Primitive,
@@ -41,20 +43,24 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a SpriteRenderer)> for
         let sprites = self
             .iter::<Sprite>()
             .map(|sprite_renderer| (&sprite_renderer.transform, &sprite_renderer.entity.renderer));
-        Box::new(sprites)
+        let huds = self
+            .iter::<HudEntity>()
+            .map(|hud_entity| (&hud_entity.transform, &hud_entity.entity.crosshair));
+
+        Box::new(sprites.chain(huds))
     }
 }
 
 impl SpriteRendererSystem {
     pub fn render(&self, entity_manager: &EntityManager, camera: &Camera) {
         let projection = camera.projection();
+        self.shader.bind();
         entity_manager
             .get_view()
             .for_each(|(transform, shape): (&Transform, &SpriteRenderer)| {
-                shape.material.bind();
+                shape.material.bind(&self.shader);
                 let mvp = projection * transform.model();
                 self.shader.bind_projection_view_model(&mvp.to_cols_array());
-
                 shape.quad.render();
             });
     }

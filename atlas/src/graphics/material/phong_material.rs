@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use glad_gl::gl;
+
 use crate::{
     game_root::GameError,
     graphics::{
@@ -18,15 +20,19 @@ pub struct PhongMaterial {
 impl Default for PhongMaterial {
     fn default() -> Self {
         Self {
-            diffuse: Texture::from_color((0.2, 0.2, 0.2)),
+            diffuse: Texture::from_color((0.2,0.2,0.2)),
         }
     }
 }
 
 impl Material for PhongMaterial {
     type Shader = MeshShader;
-    fn bind(&self) {
-        self.diffuse.bind();
+    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.diffuse.bind();
+            shader.bind_diffuse(0);
+        }
     }
 }
 

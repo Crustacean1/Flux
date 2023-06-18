@@ -42,6 +42,7 @@ impl<Instance: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
     pub fn render(&self) {
         unsafe {
             self.primitive.use_vao(|| {
+                //println!("Rendering {} {}", self.primitive.index_count(), self.instanced_buffer.count());
                 gl::DrawElementsInstanced(
                     Index::GEOMETRY,
                     self.primitive.index_count(),

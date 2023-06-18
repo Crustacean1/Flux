@@ -7,6 +7,8 @@ pub mod sprite;
 pub mod starlight;
 pub mod ui_label;
 pub mod bullet;
+pub mod asteroid;
+pub mod hud;
 
 pub struct GameEntity<T> {
     pub entity: T,

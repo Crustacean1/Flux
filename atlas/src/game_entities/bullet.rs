@@ -1,6 +1,6 @@
-use crate::{components::physical_body::PhysicalBody, graphics::mesh::Mesh};
+use crate::{
+    graphics::{mesh::Mesh, primitive::Primitive, vertices::sphere::sphere},
+    resource_manager::{self, scene_resource_manager::SceneResourceManager, ResourceManager},
+};
 
-pub struct Bullet {
-    pub physical_body: PhysicalBody,
-    pub mesh: Mesh,
-}
+pub struct BulletEntity;

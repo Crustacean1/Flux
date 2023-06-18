@@ -1,7 +1,7 @@
 use atlas::{
     components::{
         button_handler::ButtonHandler, button_trigger::ButtonTrigger,
-        shape_renderer::SpriteRenderer, transform::Transform,
+        sprite_renderer::SpriteRenderer, transform::Transform,
     },
     entity_manager::{EntityManager, EntityManagerTrait},
     game_root::GameError,

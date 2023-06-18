@@ -1,4 +1,4 @@
-use crate::components::shape_renderer::SpriteRenderer;
+use crate::components::sprite_renderer::SpriteRenderer;
 
 pub struct Sprite {
     pub renderer: SpriteRenderer,

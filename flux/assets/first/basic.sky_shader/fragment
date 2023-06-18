@@ -1,12 +1,14 @@
-#version 420 core
+#version 460 core
 
 in vec2 vTex;
+flat in uint vSide;
+
 out vec4 fCol;
 
-uniform sampler2D billboard;
+uniform sampler2D billboards[6];
 
 void main(){
-    fCol = texture(billboard, vTex);
+    fCol = texture(billboards[vSide], vTex);
 }
 
 

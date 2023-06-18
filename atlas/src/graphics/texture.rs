@@ -55,7 +55,7 @@ impl Texture {
         let color_texture: [u8; 3] = [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8];
 
         let dimensions = (1, 1);
-        let channel_layout = ChannelLayout::R8;
+        let channel_layout = ChannelLayout::Rgb8;
 
         let texture_id = Self::create_texture();
         Self::load_texture(&color_texture, channel_layout, dimensions);

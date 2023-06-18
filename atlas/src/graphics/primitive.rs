@@ -6,7 +6,7 @@ use glad_gl::gl;
 use super::vertices::{
     buffer::{Buffer, BufferTarget},
     indices::IndexGeometry,
-    layouts::BufferElement,
+    layouts::{Attribute, BufferElement},
 };
 
 #[derive(Clone)]
@@ -67,11 +67,11 @@ impl<Vertex: BufferElement, Index: IndexGeometry> Primitive<Vertex, Index> {
         }
     }
 
-    pub fn declare_layout(layout: &[usize], attrib_start: usize, divisor: u32) {
-        let stride = layout.iter().sum::<usize>() * mem::size_of::<f32>();
-        let offsets = layout.iter().scan(0, |offset, &size| {
+    pub fn declare_layout(layout: &[Attribute], attrib_start: usize, divisor: u32) {
+        let stride = layout.iter().map(|a| a.size()).sum::<usize>();
+        let offsets = layout.iter().scan(0, |offset, attribute| {
             let position = *offset;
-            *offset += size * mem::size_of::<f32>();
+            *offset += attribute.size();
             Some(position)
         });
 
@@ -83,14 +83,27 @@ impl<Vertex: BufferElement, Index: IndexGeometry> Primitive<Vertex, Index> {
                 .for_each(|(i, (attrib, offset))| {
                     let attrib_index = (attrib_start + i) as u32;
                     gl::EnableVertexAttribArray(attrib_index);
-                    gl::VertexAttribPointer(
-                        attrib_index,
-                        *attrib as i32,
-                        gl::FLOAT,
-                        gl::FALSE,
-                        stride as i32,
-                        offset as *const ffi::c_void,
-                    );
+                    match attrib {
+                        Attribute::Float(_) => {
+                            gl::VertexAttribPointer(
+                                attrib_index,
+                                attrib.count() as i32,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                stride as i32,
+                                offset as *const ffi::c_void,
+                            );
+                        }
+                        Attribute::UnsignedInt(_) => {
+                            gl::VertexAttribIPointer(
+                                attrib_index,
+                                attrib.count() as i32,
+                                gl::UNSIGNED_INT,
+                                stride as i32,
+                                offset as *const ffi::c_void,
+                            );
+                        }
+                    }
                     gl::VertexAttribDivisor(attrib_index, divisor);
                 })
         }

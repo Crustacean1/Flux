@@ -1,4 +1,5 @@
 use super::material::phong_material::PhongMaterial;
+use super::material::Material;
 use super::shaders::mesh_shader::MeshShader;
 use super::vertices::indices::TriangleGeometry;
 use super::vertices::layouts::{PTNVertex, PTVertex};
@@ -18,11 +19,10 @@ pub struct Skybox {
 
 impl Mesh {
     pub fn render(&self, shader: &ShaderProgram<MeshShader>) {
-        self.primitives
-            .iter()
-            .for_each(|(material, primitive)| unsafe {
-                primitive.render();
-            });
+        self.primitives.iter().for_each(|(material, primitive)| {
+            material.bind(shader);
+            primitive.render();
+        });
     }
 }
 

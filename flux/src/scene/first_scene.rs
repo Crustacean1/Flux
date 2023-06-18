@@ -6,12 +6,13 @@ use atlas::{
         mesh_renderer::MeshRendererSystem,
         particle_renderer::ParticleRenderer,
         skybox_renderer::SkyboxRendererSystem,
+        sprite_renderer::SpriteRendererSystem,
         text_renderer::{TextRenderer, TextRendererSystem},
         transform::Transform,
     },
     entity_manager::EntityManager,
     event_bus::{create_event_queue, EventReader, EventSender},
-    game_entities::{player_ship::PlayerShip, ui_label::UiLabel, GameEntity},
+    game_entities::{bullet::BulletEntity, player_ship::PlayerShip, ui_label::UiLabel, GameEntity},
     game_root::GameError,
     graphics::graphics_context::{ContextEvent, GraphicsContext},
     resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
@@ -28,7 +29,7 @@ use glam::Vec3;
 use crate::game_objects::asteroids::asteroids;
 
 pub enum GameEvent {
-    ShootPlasmaBullet,
+    ShootPlasmaBullet(BulletEntity),
     RemoveEntity(usize),
 }
 
@@ -38,6 +39,7 @@ pub struct FirstScene {
     resource_manager: SceneResourceManager,
 
     particle_renderer: ParticleRenderer,
+    sprite_renderer: SpriteRendererSystem,
     text_renderer: TextRendererSystem,
     mesh_renderer: MeshRendererSystem,
     skybox_renderer: SkyboxRendererSystem,
@@ -53,25 +55,31 @@ impl Scene for FirstScene {
         &mut self,
         graphics_context: &mut atlas::graphics::graphics_context::GraphicsContext,
     ) -> SceneEvent {
-        let font: Font = self.resource_manager.get("main").res;
-        let fps_counter_label = self.entity_manager.add_at(
-            UiLabel {
-                renderer: TextRenderer::new("", font),
-            },
-            Transform::pos(Vec3::new(50., 50., 0.0)),
-        );
+        let fps_counter = self.create_label(Vec3::new(50.0, 50.0, 0.0));
+        let physics_counter = self.create_label(Vec3::new(50.0, 100.0, 0.0));
 
         let (mut now, mut prev, mut prev_phys) = (Instant::now(), Instant::now(), Instant::now());
+
+        let mut physics_delta: u128 = 0;
+
         let mut fps = 0.0;
+        let mut physics_fps = 0.0;
 
         loop {
             prev = now;
             now = Instant::now();
 
+            physics_delta += (now - prev).as_nanos();
+
             fps = fps * 0.9 + 0.1 * (1_000_000_000.0 / (now - prev).as_nanos() as f32);
             self.event_sender.write(TextChangeEvent::TextChange(
-                fps_counter_label,
+                fps_counter,
                 format!("FPS: {}", fps),
+            ));
+
+            self.event_sender.write(TextChangeEvent::TextChange(
+                physics_counter,
+                format!("Physix: {}", physics_fps),
             ));
 
             self.render(graphics_context);
@@ -86,10 +94,13 @@ impl Scene for FirstScene {
             );
             graphics_context.display();
 
-            if (now - prev_phys).as_nanos() > self.physical_simulation.delta() {
+            if physics_delta > self.physical_simulation.delta() {
+                physics_fps = physics_fps * 0.9
+                    + 0.1 * (1_000_000_000.0 / prev_phys.elapsed().as_nanos() as f32);
                 self.physical_simulation
                     .integrate_movement(&mut self.entity_manager);
-                prev_phys = now;
+                physics_delta -= self.physical_simulation.delta();
+                prev_phys = Instant::now();
             }
 
             self.poll_events(graphics_context);
@@ -112,6 +123,7 @@ impl FirstScene {
             player_controller,
             physical_simulation,
             text_renderer,
+            sprite_renderer,
             particle_renderer,
             event_sender,
             event_reader,
@@ -119,7 +131,7 @@ impl FirstScene {
 
         let (width, height) = graphics_context.dimensions();
 
-        asteroids(&mut entity_manager, &mut resource_manager)?;
+        asteroids(&mut entity_manager, &mut resource_manager, graphics_context)?;
 
         let ui_camera = Camera::new(
             Frustrum::orthogonal(width as f32, height as f32),
@@ -136,6 +148,7 @@ impl FirstScene {
             skybox_renderer,
             particle_renderer,
             text_renderer,
+            sprite_renderer,
             player_controller,
             physical_simulation,
             event_sender,
@@ -148,6 +161,17 @@ impl FirstScene {
     }
 
     fn process_events(&mut self, graphics_context: &mut GraphicsContext) -> Option<SceneEvent> {
+        self.event_reader.read().map(|events| {
+            events.for_each(|event| match event {
+                GameEvent::ShootPlasmaBullet(bullet) => {
+                    self.entity_manager.add(bullet);
+                }
+                GameEvent::RemoveEntity(_) => {
+                    //self.entity_manager.
+                }
+            })
+        });
+
         self.event_reader
             .read()?
             .fold(None, |action, event| match event {
@@ -168,6 +192,7 @@ impl FirstScene {
             PlayerController,
             PhysicalSimulation,
             TextRendererSystem,
+            SpriteRendererSystem,
             ParticleRenderer,
             EventSender,
             EventReader,
@@ -178,6 +203,7 @@ impl FirstScene {
         let phong_shader = resource_manager.get("phong").res;
         let skybox_shader = resource_manager.get("basic").res;
         let particle_shader = resource_manager.get("flat").res;
+        let sprite_shader = resource_manager.get("basic").res;
 
         let mesh_renderer = MeshRendererSystem::new(phong_shader);
         let skybox_renderer = SkyboxRendererSystem::new(skybox_shader);
@@ -185,6 +211,7 @@ impl FirstScene {
         let physical_simulation = PhysicalSimulation::new(1.0 / 120.0);
         let text_system = TextRendererSystem::new(text_shader);
         let particle_renderer = ParticleRenderer::new(particle_shader);
+        let sprite_renderer = SpriteRendererSystem::new(sprite_shader);
 
         let (event_sender, event_reader) = create_event_queue();
 
@@ -194,6 +221,7 @@ impl FirstScene {
             player_controller,
             physical_simulation,
             text_system,
+            sprite_renderer,
             particle_renderer,
             event_sender,
             event_reader,
@@ -215,6 +243,9 @@ impl FirstScene {
                 .render(&self.entity_manager, camera, camera_transform);
             context.depth_write(true);
 
+            self.sprite_renderer
+                .render(&self.entity_manager, &self.ui_camera);
+
             self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);
         }
@@ -225,5 +256,15 @@ impl FirstScene {
             .iter()
             .map(|player: &GameEntity<PlayerShip>| (&player.transform, &player.entity.camera))
             .next()
+    }
+
+    fn create_label(&mut self, position: Vec3) -> usize {
+        let font: Font = self.resource_manager.get("main").res;
+        self.entity_manager.add_at(
+            UiLabel {
+                renderer: TextRenderer::new("", font),
+            },
+            Transform::pos(position),
+        )
     }
 }

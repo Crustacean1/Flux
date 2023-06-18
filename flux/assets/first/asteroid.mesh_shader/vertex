@@ -1,0 +1,19 @@
+#version 420 core
+
+layout (location=0) in vec3 pos;
+layout (location=1) in vec2 tex;
+layout (location=2) in vec3 norm;
+
+out vec3 vPos;
+out vec2 vTex;
+out vec3 vNorm;
+
+uniform mat4 projection_view_model;
+uniform mat4 view_model;
+
+void main(){
+    gl_Position = projection_view_model * vec4(pos, 1.0);
+    vTex = tex;
+    vNorm = (view_model * vec4(norm, 0.0)).xyz;
+    vPos = (view_model * vec4(pos, 1.0)).xyz;
+}

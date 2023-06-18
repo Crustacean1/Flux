@@ -4,7 +4,7 @@ use crate::{
     components::{camera::Camera, physical_body::PhysicalBody, transform::Transform},
     entity_manager::{ComponentMutIteratorGenerator, EntityManager},
     event_bus::{EventReader, EventSender},
-    game_entities::player_ship::PlayerShip,
+    game_entities::{bullet::BulletEntity, player_ship::PlayerShip},
     graphics::graphics_context::IoEvent,
 };
 
@@ -35,7 +35,7 @@ impl PlayerController {
     pub fn new() -> Self {
         Self {
             buttons: vec![],
-            thruster_force: 1.,
+            thruster_force: 0.1,
             mouse_speed: 0.001,
         }
     }
@@ -93,9 +93,8 @@ impl PlayerController {
         physical_body.add_force(Vec3::new(force.x, force.y, force.z));
 
         self.buttons.iter().for_each(|button| match button {
-            '1' => event_sender.write(1),
+            '1' => event_sender.write(BulletEntity {}),
             _ => {}
         });
-        //transform.position += Vec3::new(movement.x, movement.y, movement.z);
     }
 }

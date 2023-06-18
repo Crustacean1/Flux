@@ -2,7 +2,7 @@ use glam::{Mat4, Vec3};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
-    game_entities::ui_label::UiLabel,
+    game_entities::{hud::HudEntity, ui_label::UiLabel},
     graphics::{
         primitive::Primitive,
         shaders::{text_shader::TextShader, ShaderProgram},
@@ -61,7 +61,11 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for E
             .iter::<UiLabel>()
             .map(|label| (&label.transform, &label.entity.renderer));
 
-        Box::new(labels)
+        let huds = self
+            .iter::<HudEntity>()
+            .map(|hud| (&hud.transform, &hud.entity.enemy_name));
+
+        Box::new(labels.chain(huds))
     }
 }
 

@@ -1,0 +1,10 @@
+#version 420 core
+
+in vec2 vTex;
+out vec4 fCol;
+
+uniform sampler2D sprite_texture;
+
+void main() {
+    fCol = texture(sprite_texture, vTex);
+}

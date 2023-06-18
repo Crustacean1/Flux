@@ -2,7 +2,10 @@ use glam::{Vec3, Vec4};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
-    game_entities::{enemy_ship::EnemyShip, player_ship::PlayerShip, starlight::Starlight},
+    game_entities::{
+        asteroid::AsteroidEntity, enemy_ship::EnemyShip, player_ship::PlayerShip,
+        starlight::Starlight,
+    },
     graphics::{
         lights::Light,
         material::phong_material::PhongMaterial,
@@ -30,8 +33,11 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Mesh)> for EntityMan
         let players = self
             .iter::<PlayerShip>()
             .map(|ship| (&ship.transform, &ship.entity.mesh));
+        let asteroids = self
+            .iter::<AsteroidEntity>()
+            .map(|asteroid| (&asteroid.transform, &asteroid.entity.mesh));
 
-        Box::new(enemies.chain(players))
+        Box::new(enemies.chain(players).chain(asteroids))
     }
 }
 

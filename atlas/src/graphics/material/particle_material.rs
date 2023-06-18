@@ -4,7 +4,10 @@ use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
-    graphics::{shaders::particle_shader::ParticleShader, texture::Texture},
+    graphics::{
+        shaders::{particle_shader::ParticleShader, ShaderProgram},
+        texture::Texture,
+    },
 };
 
 use super::Material;
@@ -25,7 +28,7 @@ impl Default for ParticleMaterial {
 impl Material for ParticleMaterial {
     type Shader = ParticleShader;
 
-    fn bind(&self) {
+    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.texture.bind();

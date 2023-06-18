@@ -38,7 +38,7 @@ vec3 cast_light(Material material, DirectionalLight light){
     vec3 camera_dir = -normalize(vPos);
     specular *= pow(max(dot(camera_dir, reflection), 0), 32);
 
-    return ambient + diffuse + specular * 0.001;
+    return ambient + diffuse + specular;
 }
 
 uniform Material material;
@@ -50,6 +50,4 @@ void main() {
     for(int i = 0; i< directional_light_count; ++i) {
         fCol += vec4(cast_light(material, directional_lights[i]), 0);
     }
-    //fCol *= 0.00001;
-    //fCol += vec4(vTex, 0,1);
 }

@@ -1,11 +1,12 @@
 use glad_gl::gl;
 
-pub mod base_vertices;
 pub mod buffer;
 pub mod generator;
 pub mod indices;
 pub mod layouts;
 pub mod skybox;
+pub mod sphere;
+pub mod asteroid;
 
 pub enum PrimitiveType {
     Points,

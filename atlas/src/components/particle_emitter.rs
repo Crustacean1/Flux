@@ -8,7 +8,7 @@ use crate::{
         vertices::{
             generator,
             indices::TriangleGeometry,
-            layouts::{BufferElement, P2TVertex},
+            layouts::{Attribute, BufferElement, P2TVertex},
         },
     },
 };
@@ -24,10 +24,13 @@ pub struct ParticleInstance {
 }
 
 impl BufferElement for ParticleInstance {
-    type ElementType = f32;
-
-    fn layout() -> Vec<usize> {
-        vec![3, 3, 2, 2]
+    fn layout() -> Vec<Attribute> {
+        vec![
+            Attribute::Float(3),
+            Attribute::Float(3),
+            Attribute::Float(2),
+            Attribute::Float(2),
+        ]
     }
 }
 
@@ -50,7 +53,7 @@ pub struct ParticleEmitter {
     pub definition: ParticleEmitterDefinition,
     pub mesh: InstancedPrimitive<ParticleInstance, P2TVertex, TriangleGeometry>,
     pub material: ParticleMaterial,
-    pub spawner: &'static dyn Fn(&Transform, &mut Particle),
+    pub spawner: &'static dyn Fn(&mut Particle),
     pub particles: Vec<Particle>,
     pub particle_instances: Vec<ParticleInstance>,
     pub since_last_spawn: f32,
@@ -61,7 +64,7 @@ impl ParticleEmitter {
         definition: ParticleEmitterDefinition,
         material: ParticleMaterial,
         mesh: InstancedPrimitive<ParticleInstance, P2TVertex, TriangleGeometry>,
-        spawner: &'static dyn Fn(&Transform, &mut Particle),
+        spawner: &'static dyn Fn(&mut Particle),
     ) -> Self {
         Self {
             particles: Vec::with_capacity(definition.count),

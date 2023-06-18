@@ -1,11 +1,19 @@
+use glam::Mat4;
+
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::space_box::SpaceBox,
     graphics::{
+        instanced_primitive::InstancedPrimitive,
         material::{skybox_material::SkyboxMaterial, Material},
         primitive::Primitive,
         shaders::{skybox_shader::SkyboxShader, ShaderProgram},
-        vertices::{generator, indices::TriangleGeometry, layouts::PTVertex, skybox},
+        vertices::{
+            generator,
+            indices::TriangleGeometry,
+            layouts::PTVertex,
+            skybox::{self, SkyboxInstance},
+        },
     },
 };
 
@@ -13,7 +21,7 @@ use super::{camera::Camera, transform::Transform};
 
 pub struct SkyboxRenderer {
     material: SkyboxMaterial,
-    mesh: Primitive<PTVertex, TriangleGeometry>,
+    mesh: InstancedPrimitive<SkyboxInstance, PTVertex, TriangleGeometry>,
 }
 
 pub struct SkyboxRendererSystem {
@@ -22,9 +30,9 @@ pub struct SkyboxRendererSystem {
 
 impl SkyboxRenderer {
     pub fn new(size: f32, material: SkyboxMaterial) -> Self {
-        let (vertices, indices) = skybox::skybox(size);
+        let (vertices, indices, instances) = skybox::skybox(size);
         SkyboxRenderer {
-            mesh: Primitive::new(&vertices, &indices),
+            mesh: InstancedPrimitive::new(&vertices, &indices, &instances),
             material,
         }
     }
@@ -52,18 +60,13 @@ impl SkyboxRendererSystem {
         entity_manager
             .get_view()
             .for_each(|skybox: &SkyboxRenderer| {
-                skybox.material.bind();
+                skybox.material.bind(&self.shader);
 
                 let (projection, view) = camera.projection_view(camera_transform);
 
                 self.shader
                     .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
-
-                (2..6).for_each(|i| {
-                    self.shader.bind_billboard(i as i32);
-                    let (start, end) = (i * 6, i * 6 + 6);
-                    skybox.mesh.render_sub(start..end);
-                });
+                skybox.mesh.render();
             });
     }
 

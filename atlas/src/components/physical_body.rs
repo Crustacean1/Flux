@@ -35,7 +35,7 @@ impl PhysicalBody {
         self.momentum / self.mass
     }
 
-    pub fn angular_veolcity(&self) -> Vec3 {
+    pub fn  ngular_veolcity(&self) -> Vec3 {
         self.angular_momentum / self.angular_inertia
     }
 
@@ -43,7 +43,7 @@ impl PhysicalBody {
         self.momentum += self.resultant_force * delta;
         self.resultant_force = Vec3::ZERO;
         self.resultant_ang_force = Vec3::ZERO;
-        self.momentum *= 0.99;
+        self.momentum *= 0.995;
     }
 
     pub fn add_force(&mut self, force: Vec3) {

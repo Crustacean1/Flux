@@ -43,7 +43,7 @@ impl PhysicalSimulation {
     }
 
     pub fn delta(&self) -> u128 {
-        (self.delta * 1000_000.0) as u128
+        (self.delta * 1_000_000_000.0) as u128
     }
 
     pub fn integrate_movement(&mut self, entity_manager: &mut EntityManager) {

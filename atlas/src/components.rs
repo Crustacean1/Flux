@@ -5,7 +5,7 @@ pub mod controller;
 pub mod mesh_renderer;
 pub mod particle_emitter;
 pub mod physical_body;
-pub mod shape_renderer;
+pub mod sprite_renderer;
 pub mod skybox_renderer;
 pub mod text_renderer;
 pub mod transform;

@@ -4,7 +4,7 @@ use atlas::{
     components::{
         button_trigger::ButtonTriggerSystem,
         camera::{Camera, Frustrum},
-        shape_renderer::SpriteRendererSystem,
+        sprite_renderer::SpriteRendererSystem,
     },
     entity_manager::EntityManager,
     event_bus::{create_event_queue, EventReader, EventSender},

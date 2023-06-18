@@ -38,14 +38,14 @@ impl ParticleRenderer {
         camera: &Camera,
         camera_transform: &Transform,
     ) {
+        self.shader.bind();
         entity_manager.get_view().for_each(
             |(transform, particle_emitter): (&Transform, &ParticleEmitter)| {
-                self.shader.bind();
                 let (projection, view) = camera.projection_view(camera_transform);
 
+                particle_emitter.material.bind(&self.shader);
                 self.shader
                     .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
-                particle_emitter.material.bind();
                 particle_emitter.mesh.render();
             },
         );
