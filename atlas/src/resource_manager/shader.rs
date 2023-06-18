@@ -10,8 +10,9 @@ use glad_gl::gl;
 use crate::{
     game_root::GameError,
     graphics::shaders::{
-        mesh_shader::MeshShader, particle_shader::ParticleShader, skybox_shader::SkyboxShader,
-        text_shader::TextShader, ui_shader::SpriteShader, Shader, ShaderProgram, ShaderType,
+        bullet_shader::BulletShader, mesh_shader::MeshShader, particle_shader::ParticleShader,
+        skybox_shader::SkyboxShader, text_shader::TextShader, ui_shader::SpriteShader, Shader,
+        ShaderProgram, ShaderType,
     },
 };
 
@@ -164,6 +165,7 @@ pub fn load_shader(res_id: &str, ext: &str, path: &PathBuf, res_man: &mut SceneR
             "sky_shader",
             "text_shader",
             "particle_shader",
+            "bullet_shader",
         ]
         .contains(&ext)
         {
@@ -215,6 +217,10 @@ fn link_shader(
         "particle_shader" => res_man.register(
             res_id,
             ShaderUnit::link::<ParticleShader>(res_id, &shader_units)?,
+        ),
+        "bullet_shader" => res_man.register(
+            res_id,
+            ShaderUnit::link::<BulletShader>(res_id, &shader_units)?,
         ),
         _ => {}
     };

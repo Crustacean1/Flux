@@ -1,0 +1,7 @@
+#version 460 core
+
+out vec4 fCol;
+
+void main(){
+    fCol = vec4(1,0,1,1);
+}

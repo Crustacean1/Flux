@@ -34,11 +34,12 @@ impl AsteroidEntity {
 }
 
 pub fn generate_asteroid((width, height): (usize, usize)) -> Result<Texture, GameError> {
-    let mut buffer = vec![16; width * height * 3];
-    add_perlin_noise(&mut buffer, (width, height), 16, 128.0);
-    add_perlin_noise(&mut buffer, (width, height), 32, 64.0);
-    add_perlin_noise(&mut buffer, (width, height), 64, 32.0);
-    add_perlin_noise(&mut buffer, (width, height), 128, 16.0);
+    let mut buffer = vec![32; width * height * 3];
+    add_perlin_noise(&mut buffer, (width, height), 32, 104.0);
+    add_perlin_noise(&mut buffer, (width, height), 64, 64.0);
+    add_perlin_noise(&mut buffer, (width, height), 128, 32.0);
+    add_perlin_noise(&mut buffer, (width, height), 256, 16.0);
+    add_perlin_noise(&mut buffer, (width, height), 512, 8.0);
     Texture::from_buff(&buffer, ChannelLayout::Rgb8, (width as u32, height as u32))
 }
 

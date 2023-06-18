@@ -11,6 +11,7 @@ use atlas::{
     entity_manager::EntityManager,
     game_entities::{
         asteroid::{add_perlin_noise, generate_asteroid, AsteroidEntity},
+        bullet::BulletEntity,
         enemy_ship::EnemyShip,
         hud::HudEntity,
         player_ship::PlayerShip,
@@ -91,19 +92,10 @@ pub fn asteroids(
         );
     });
 
-    entity_manager.add(Starlight {
-        light: Light::DirectionalLight(
-            Vec3::new(0.0, -1.0, 0.0),
-            LightColor {
-                ambient: Vec3::new(0.01, 0.01, 0.01),
-                diffuse: Vec3::new(0.5, 0.5, 0.5),
-                specular: Vec3::new(0.3, 0.3, 0.3),
-            },
-        ),
-    });
+    entity_manager.add_at(BulletEntity {}, Transform::pos(Vec3::new(10.0, 0.0, 0.0)));
 
     entity_manager.add(SpaceBox { renderer: skybox });
-
+    create_lights(entity_manager, resource_manager);
     create_hud(entity_manager, resource_manager, graphics_context);
 
     Ok(())
@@ -165,4 +157,16 @@ fn create_thruster(resource_manager: &mut SceneResourceManager) -> ParticleEmitt
         &thruster_spawner,
     )
 }
-fn create_lights(entity_manager: &mut EntityManager, resource_manager: &mut SceneResourceManager) {}
+
+fn create_lights(entity_manager: &mut EntityManager, resource_manager: &mut SceneResourceManager) {
+    entity_manager.add(Starlight {
+        light: Light::DirectionalLight(
+            Vec3::new(0.0, -1.0, 0.0),
+            LightColor {
+                ambient: Vec3::new(0.01, 0.01, 0.01),
+                diffuse: Vec3::new(0.5, 0.5, 0.5),
+                specular: Vec3::new(0.3, 0.3, 0.3),
+            },
+        ),
+    });
+}

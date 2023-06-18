@@ -54,6 +54,12 @@ pub struct PTVertex(pub [f32; 3], pub [f32; 2]);
 #[derive(Clone, Debug)]
 pub struct P2TVertex(pub [f32; 2], pub [f32; 2]);
 
+impl BufferElement for PVertex {
+    fn layout() -> Vec<Attribute> {
+        vec![Attribute::Float(3)]
+    }
+}
+
 impl BufferElement for P2TVertex {
     fn layout() -> Vec<Attribute> {
         vec![Attribute::Float(2), Attribute::Float(2)]

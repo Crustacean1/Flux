@@ -7,6 +7,7 @@ pub mod layouts;
 pub mod skybox;
 pub mod sphere;
 pub mod asteroid;
+pub mod bullet;
 
 pub enum PrimitiveType {
     Points,

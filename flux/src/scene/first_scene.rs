@@ -18,6 +18,7 @@ use atlas::{
     resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
     systems::{
+        bullet_renderer::BulletRenderer,
         particle_system::update_particles,
         physical_simulation::PhysicalSimulation,
         player_controller::PlayerController,
@@ -38,6 +39,7 @@ pub struct FirstScene {
     entity_manager: EntityManager,
     resource_manager: SceneResourceManager,
 
+    bullet_renderer: BulletRenderer,
     particle_renderer: ParticleRenderer,
     sprite_renderer: SpriteRendererSystem,
     text_renderer: TextRendererSystem,
@@ -118,6 +120,7 @@ impl FirstScene {
         let mut resource_manager = SceneResourceManager::build("first")?;
 
         let (
+            bullet_renderer,
             mesh_renderer,
             skybox_renderer,
             player_controller,
@@ -144,6 +147,7 @@ impl FirstScene {
             ui_camera,
             entity_manager,
             resource_manager,
+            bullet_renderer,
             mesh_renderer,
             skybox_renderer,
             particle_renderer,
@@ -187,6 +191,7 @@ impl FirstScene {
         resource_manager: &mut SceneResourceManager,
     ) -> Result<
         (
+            BulletRenderer,
             MeshRendererSystem,
             SkyboxRendererSystem,
             PlayerController,
@@ -204,7 +209,9 @@ impl FirstScene {
         let skybox_shader = resource_manager.get("basic").res;
         let particle_shader = resource_manager.get("flat").res;
         let sprite_shader = resource_manager.get("basic").res;
+        let bullet_shader = resource_manager.get("plasma").res;
 
+        let bullet_renderer = BulletRenderer::new(bullet_shader);
         let mesh_renderer = MeshRendererSystem::new(phong_shader);
         let skybox_renderer = SkyboxRendererSystem::new(skybox_shader);
         let player_controller = PlayerController::new();
@@ -216,6 +223,7 @@ impl FirstScene {
         let (event_sender, event_reader) = create_event_queue();
 
         Ok((
+            bullet_renderer,
             mesh_renderer,
             skybox_renderer,
             player_controller,
@@ -229,7 +237,13 @@ impl FirstScene {
     }
 
     fn render(&mut self, context: &mut GraphicsContext) {
-        if let Some((camera_transform, camera)) = self.get_player_camera() {
+        let camera_kit = self
+            .entity_manager
+            .iter()
+            .map(|player: &GameEntity<PlayerShip>| (&player.transform, &player.entity.camera))
+            .next();
+
+        if let Some((camera_transform, camera)) = camera_kit {
             context.depth_write(false);
             self.skybox_renderer
                 .render(&self.entity_manager, camera, camera_transform);
@@ -243,19 +257,15 @@ impl FirstScene {
                 .render(&self.entity_manager, camera, camera_transform);
             context.depth_write(true);
 
+            self.bullet_renderer
+                .render_bullets(&self.entity_manager, camera, camera_transform);
+
             self.sprite_renderer
                 .render(&self.entity_manager, &self.ui_camera);
 
             self.text_renderer
                 .render(&self.entity_manager, &self.ui_camera);
         }
-    }
-
-    fn get_player_camera(&self) -> Option<(&Transform, &Camera)> {
-        self.entity_manager
-            .iter()
-            .map(|player: &GameEntity<PlayerShip>| (&player.transform, &player.entity.camera))
-            .next()
     }
 
     fn create_label(&mut self, position: Vec3) -> usize {
