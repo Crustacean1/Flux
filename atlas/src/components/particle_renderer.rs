@@ -43,7 +43,7 @@ impl ParticleRenderer {
             |(transform, particle_emitter): (&Transform, &ParticleEmitter)| {
                 let (projection, view) = camera.projection_view(camera_transform);
 
-                particle_emitter.material.bind(&self.shader);
+                particle_emitter.material.bind();
                 self.shader
                     .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
                 particle_emitter.mesh.render();

@@ -1,7 +1,9 @@
 use std::{fs, path::PathBuf};
 
 use crate::graphics::material::{
-    phong_material::PhongMaterial, skybox_material::SkyboxMaterial, sprite_material::SpriteMaterial, particle_material::ParticleMaterial,
+    bullet_material::BulletMaterial, particle_material::ParticleMaterial,
+    phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
+    sprite_material::SpriteMaterial,
 };
 
 use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
@@ -22,6 +24,7 @@ pub fn load_mat(res_id: &str, ext: &str, dir: &PathBuf, res_man: &mut SceneResou
             "mat" => PhongMaterial::load(&files).map(|res| res_man.register(res_id, res)),
             "skybox" => SkyboxMaterial::load(&files).map(|res| res_man.register(res_id, res)),
             "particle" => ParticleMaterial::load(&files).map(|res| res_man.register(res_id, res)),
+            "bullet" => BulletMaterial::load(&files).map(|res| res_man.register(res_id, res)),
             _ => Ok(()),
         };
         if let Err(e) = result {

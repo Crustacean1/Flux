@@ -1,17 +1,28 @@
-use glam::{Quat, Vec3, Vec4};
+use glam::{Quat, Vec3, Vec4, Vec4Swizzles};
 
 use crate::{
-    components::{camera::Camera, physical_body::PhysicalBody, transform::Transform},
+    components::{
+        camera::Camera,
+        collider::Collider,
+        physical_body::{PhysicalBody, PhysicalInteraction},
+        transform::Transform,
+    },
     entity_manager::{ComponentMutIteratorGenerator, EntityManager},
     event_bus::{EventReader, EventSender},
     game_entities::{bullet::BulletEntity, player_ship::PlayerShip},
     graphics::graphics_context::IoEvent,
 };
 
+pub enum GameEvent {
+    ShootPlasmaBullet(Transform, BulletEntity),
+    RemoveBullet(usize),
+}
+
 pub struct PlayerController {
     buttons: Vec<char>,
     thruster_force: f32,
     mouse_speed: f32,
+    bullet_cooldown: u128,
 }
 
 impl<'a> ComponentMutIteratorGenerator<'a, (&'a mut Transform, &'a mut PhysicalBody, &'a Camera)>
@@ -35,13 +46,15 @@ impl PlayerController {
     pub fn new() -> Self {
         Self {
             buttons: vec![],
-            thruster_force: 0.1,
+            thruster_force: 100.,
             mouse_speed: 0.001,
+            bullet_cooldown: 0,
         }
     }
 
     pub fn control(
         &mut self,
+        time: u128,
         entity_manager: &mut EntityManager,
         event_reader: &mut EventReader,
         event_sender: &mut EventSender,
@@ -49,7 +62,7 @@ impl PlayerController {
         entity_manager.get_mut_view().for_each(
             |(transform, physical_body, _): (&mut Transform, &mut PhysicalBody, &Camera)| {
                 self.process_inputs(transform, event_reader);
-                self.move_around(transform, physical_body, event_sender);
+                self.move_around(time, transform, physical_body, event_sender);
             },
         );
     }
@@ -74,27 +87,64 @@ impl PlayerController {
     }
 
     fn move_around(
-        &self,
-        transform: &Transform,
+        &mut self,
+        delta: u128,
+        transform: &mut Transform,
         physical_body: &mut PhysicalBody,
         event_sender: &mut EventSender,
     ) {
-        let force: Vec4 = self
-            .buttons
-            .iter()
-            .map(|button| match button {
-                'S' => Vec4::new(0.0, 0.0, self.thruster_force, 0.0),
-                'W' => Vec4::new(0.0, 0.0, -self.thruster_force, 0.0),
-                _ => Vec4::new(0.0, 0.0, 0.0, 0.0),
-            })
-            .sum();
+        let mut force = Vec4::ZERO;
 
-        let force = transform.model() * force * 100.;
-        physical_body.add_force(Vec3::new(force.x, force.y, force.z));
+        self.bullet_cooldown = if self.bullet_cooldown > delta {
+            self.bullet_cooldown - delta
+        } else {
+            0
+        };
 
         self.buttons.iter().for_each(|button| match button {
-            '1' => event_sender.write(BulletEntity {}),
+            'S' => force += Vec4::new(0.0, 0.0, self.thruster_force, 0.0),
+            'W' => force += Vec4::new(0.0, 0.0, -self.thruster_force, 0.0),
+            '1' => {
+                if self.bullet_cooldown == 0 {
+                    self.bullet_cooldown = 1_00_000_000;
+
+                    let mut transform1 = *transform;
+                    transform1.position += transform.to_global(Vec4::new(-1.5, -0.4, -2.5, 0.0)).xyz();
+                    let mut transform2 = *transform;
+                    transform2.position += transform.to_global(Vec4::new(1.5, -0.4, -2.5, 0.0)).xyz();
+
+                    let velocity = physical_body.velocity()
+                        + transform.to_global(Vec4::new(0.0, 0.0, -25.0, 0.0)).xyz();
+
+                    let mut body1 = PhysicalBody::new(1.0, 1.0);
+                    let mut body2 = PhysicalBody::new(1.0, 1.0);
+
+                    body1.momentum = velocity;
+                    body2.momentum = velocity;
+
+                    event_sender.write(GameEvent::ShootPlasmaBullet(
+                        transform1,
+                        BulletEntity {
+                            collider: Collider { radius: 0.5 },
+                            body: body1,
+                            lifetime: 200.0,
+                        },
+                    ));
+                    event_sender.write(GameEvent::ShootPlasmaBullet(
+                        transform2,
+                        BulletEntity {
+                            collider: Collider { radius: 0.5 },
+                            body: body2,
+                            lifetime: 200.0,
+                        },
+                    ));
+                }
+            }
             _ => {}
         });
+
+        let force = transform.model() * force;
+        physical_body.add_force(Vec3::new(force.x, force.y, force.z));
+        //transform.position += force.xyz() * 0.1;
     }
 }

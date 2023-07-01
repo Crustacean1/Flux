@@ -1,3 +1,4 @@
+pub mod bullet_material;
 pub mod particle_material;
 pub mod phong_material;
 pub mod skybox_material;
@@ -11,7 +12,7 @@ use super::{shaders::ShaderProgram, texture::Texture};
 
 pub trait Material {
     type Shader: Clone;
-    fn bind(&self, shader: &ShaderProgram<Self::Shader>);
+    fn bind(&self);
 }
 
 fn load_named_texture(name: &str, textures: &Vec<PathBuf>) -> Result<Texture, GameError> {

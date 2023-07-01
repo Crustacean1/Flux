@@ -1,7 +1,13 @@
-use crate::{components::{physical_body::PhysicalBody, particle_emitter::ParticleEmitter}, graphics::mesh::Mesh};
+use crate::{
+    components::{
+        collider::Collider, particle_emitter::ParticleEmitter, physical_body::PhysicalBody,
+    },
+    graphics::mesh::Mesh,
+};
 
 pub struct EnemyShip {
     pub physical_body: PhysicalBody,
     pub thruster: ParticleEmitter,
+    pub collider: Collider,
     pub mesh: Mesh,
 }

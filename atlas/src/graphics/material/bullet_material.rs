@@ -4,20 +4,17 @@ use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
-    graphics::{
-        shaders::{particle_shader::ParticleShader, ShaderProgram},
-        texture::Texture,
-    },
+    graphics::{shaders::bullet_shader::BulletShader, texture::Texture},
 };
 
 use super::Material;
 
 #[derive(Clone)]
-pub struct ParticleMaterial {
+pub struct BulletMaterial {
     pub texture: Texture,
 }
 
-impl Default for ParticleMaterial {
+impl Default for BulletMaterial {
     fn default() -> Self {
         Self {
             texture: Texture::from_color((1.0, 0.0, 1.0)),
@@ -25,8 +22,8 @@ impl Default for ParticleMaterial {
     }
 }
 
-impl Material for ParticleMaterial {
-    type Shader = ParticleShader;
+impl Material for BulletMaterial {
+    type Shader = BulletShader;
 
     fn bind(&self) {
         unsafe {
@@ -36,12 +33,12 @@ impl Material for ParticleMaterial {
     }
 }
 
-impl ParticleMaterial {
+impl BulletMaterial {
     pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
         let texture = textures
             .iter()
             .next()
-            .ok_or(GameError::new("No texture found for particle material"))?;
+            .ok_or(GameError::new("No texture found for bullet material"))?;
 
         Ok(Self {
             texture: Texture::from_file(texture)?,

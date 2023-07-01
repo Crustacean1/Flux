@@ -1,4 +1,8 @@
-use std::{any::{Any, TypeId}, mem, rc::Rc };
+use std::{
+    any::{Any, TypeId},
+    mem,
+    rc::Rc,
+};
 
 pub fn create_event_queue() -> (EventSender, EventReader) {
     let events = Rc::new(Vec::new());
@@ -39,7 +43,6 @@ impl EventSender {
             queue.push(event);
         } else {
             events.push(Box::new(vec![event]));
-            println!("Adding event type");
         }
     }
 }

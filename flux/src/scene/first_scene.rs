@@ -19,26 +19,29 @@ use atlas::{
     scene::{Scene, SceneEvent},
     systems::{
         bullet_renderer::BulletRenderer,
+        bullet_system::update_bullets,
+        collider_renderer::CollisionRenderer,
+        collision_system::CollisionSystem,
+        hud_refresher::HudRefresher,
         particle_system::update_particles,
         physical_simulation::PhysicalSimulation,
-        player_controller::PlayerController,
+        player_controller::{GameEvent, PlayerController},
         text_update::{update_text, TextChangeEvent},
+        trail_renderer::{self, TrailRenderer},
     },
 };
 use glam::Vec3;
 
 use crate::game_objects::asteroids::asteroids;
 
-pub enum GameEvent {
-    ShootPlasmaBullet(BulletEntity),
-    RemoveEntity(usize),
-}
-
 pub struct FirstScene {
     ui_camera: Camera,
     entity_manager: EntityManager,
     resource_manager: SceneResourceManager,
 
+    trail_renderer: TrailRenderer,
+    collision_renderer: CollisionRenderer,
+    hud_refresher: HudRefresher,
     bullet_renderer: BulletRenderer,
     particle_renderer: ParticleRenderer,
     sprite_renderer: SpriteRendererSystem,
@@ -68,12 +71,11 @@ impl Scene for FirstScene {
         let mut physics_fps = 0.0;
 
         loop {
-            prev = now;
+            let delta = now.elapsed().as_nanos();
+            physics_delta += delta;
             now = Instant::now();
 
-            physics_delta += (now - prev).as_nanos();
-
-            fps = fps * 0.9 + 0.1 * (1_000_000_000.0 / (now - prev).as_nanos() as f32);
+            fps = fps * 0.9 + 0.1 * (1_000_000_000.0 / delta as f32);
             self.event_sender.write(TextChangeEvent::TextChange(
                 fps_counter,
                 format!("FPS: {}", fps),
@@ -86,23 +88,34 @@ impl Scene for FirstScene {
 
             self.render(graphics_context);
 
-            update_particles(&mut self.entity_manager, (now - prev).as_nanos());
             update_text(&mut self.entity_manager, &mut self.event_reader);
 
-            self.player_controller.control(
-                &mut self.entity_manager,
-                &mut self.event_reader,
-                &mut self.event_sender,
-            );
             graphics_context.display();
 
             if physics_delta > self.physical_simulation.delta() {
+                physics_delta -= self.physical_simulation.delta();
                 physics_fps = physics_fps * 0.9
                     + 0.1 * (1_000_000_000.0 / prev_phys.elapsed().as_nanos() as f32);
+                prev_phys = Instant::now();
+
+                self.hud_refresher.update(&mut self.entity_manager);
+                update_bullets(
+                    &mut self.entity_manager,
+                    &mut self.event_sender,
+                    self.physical_simulation.delta(),
+                );
+
+                //CollisionSystem::resolve_collisions(&self.entity_manager);
                 self.physical_simulation
                     .integrate_movement(&mut self.entity_manager);
-                physics_delta -= self.physical_simulation.delta();
-                prev_phys = Instant::now();
+                update_particles(&mut self.entity_manager, self.physical_simulation.delta());
+
+                self.player_controller.control(
+                    self.physical_simulation.delta(),
+                    &mut self.entity_manager,
+                    &mut self.event_reader,
+                    &mut self.event_sender,
+                );
             }
 
             self.poll_events(graphics_context);
@@ -128,13 +141,16 @@ impl FirstScene {
             text_renderer,
             sprite_renderer,
             particle_renderer,
+            collision_renderer,
+            trail_renderer,
             event_sender,
             event_reader,
         ) = Self::create_systems(&mut resource_manager)?;
 
         let (width, height) = graphics_context.dimensions();
 
-        asteroids(&mut entity_manager, &mut resource_manager, graphics_context)?;
+        let hud_refresher =
+            asteroids(&mut entity_manager, &mut resource_manager, graphics_context)?;
 
         let ui_camera = Camera::new(
             Frustrum::orthogonal(width as f32, height as f32),
@@ -144,9 +160,12 @@ impl FirstScene {
         graphics_context.cursor_lock(true);
 
         Ok(Box::new(FirstScene {
+            hud_refresher,
             ui_camera,
             entity_manager,
             resource_manager,
+            collision_renderer,
+            trail_renderer,
             bullet_renderer,
             mesh_renderer,
             skybox_renderer,
@@ -167,11 +186,11 @@ impl FirstScene {
     fn process_events(&mut self, graphics_context: &mut GraphicsContext) -> Option<SceneEvent> {
         self.event_reader.read().map(|events| {
             events.for_each(|event| match event {
-                GameEvent::ShootPlasmaBullet(bullet) => {
-                    self.entity_manager.add(bullet);
+                GameEvent::ShootPlasmaBullet(transform, bullet) => {
+                    self.entity_manager.add_at(bullet, transform);
                 }
-                GameEvent::RemoveEntity(_) => {
-                    //self.entity_manager.
+                GameEvent::RemoveBullet(entity) => {
+                    self.entity_manager.remove::<BulletEntity>(entity)
                 }
             })
         });
@@ -199,6 +218,8 @@ impl FirstScene {
             TextRendererSystem,
             SpriteRendererSystem,
             ParticleRenderer,
+            CollisionRenderer,
+            TrailRenderer,
             EventSender,
             EventReader,
         ),
@@ -210,6 +231,8 @@ impl FirstScene {
         let particle_shader = resource_manager.get("flat").res;
         let sprite_shader = resource_manager.get("basic").res;
         let bullet_shader = resource_manager.get("plasma").res;
+        let collision_shader = resource_manager.get("collision").res;
+        let trail_shader = resource_manager.get("trail").res;
 
         let bullet_renderer = BulletRenderer::new(bullet_shader);
         let mesh_renderer = MeshRendererSystem::new(phong_shader);
@@ -219,6 +242,8 @@ impl FirstScene {
         let text_system = TextRendererSystem::new(text_shader);
         let particle_renderer = ParticleRenderer::new(particle_shader);
         let sprite_renderer = SpriteRendererSystem::new(sprite_shader);
+        let collision_renderer = CollisionRenderer::new(collision_shader);
+        let trail_renderer = TrailRenderer::new(trail_shader);
 
         let (event_sender, event_reader) = create_event_queue();
 
@@ -231,6 +256,8 @@ impl FirstScene {
             text_system,
             sprite_renderer,
             particle_renderer,
+            collision_renderer,
+            trail_renderer,
             event_sender,
             event_reader,
         ))
@@ -240,10 +267,16 @@ impl FirstScene {
         let camera_kit = self
             .entity_manager
             .iter()
-            .map(|player: &GameEntity<PlayerShip>| (&player.transform, &player.entity.camera))
+            .map(|player: &GameEntity<PlayerShip>| {
+                (
+                    &player.transform,
+                    &player.entity.camera,
+                    &player.entity.physical_body,
+                )
+            })
             .next();
 
-        if let Some((camera_transform, camera)) = camera_kit {
+        if let Some((camera_transform, camera, body)) = camera_kit {
             context.depth_write(false);
             self.skybox_renderer
                 .render(&self.entity_manager, camera, camera_transform);
@@ -255,15 +288,25 @@ impl FirstScene {
             context.depth_write(false);
             self.particle_renderer
                 .render(&self.entity_manager, camera, camera_transform);
-            context.depth_write(true);
 
             self.bullet_renderer
                 .render_bullets(&self.entity_manager, camera, camera_transform);
 
-            self.sprite_renderer
-                .render(&self.entity_manager, &self.ui_camera);
+            /*self.collision_renderer.render(&self.entity_manager, camera, camera_transform);
+
+            self.trail_renderer.render(
+                body,
+                &self.entity_manager,
+                camera,
+                camera_transform,
+            );*/
+
+            context.depth_write(true);
 
             self.text_renderer
+                .render(&self.entity_manager, &self.ui_camera);
+
+            self.sprite_renderer
                 .render(&self.entity_manager, &self.ui_camera);
         }
     }
@@ -272,7 +315,7 @@ impl FirstScene {
         let font: Font = self.resource_manager.get("main").res;
         self.entity_manager.add_at(
             UiLabel {
-                renderer: TextRenderer::new("", font),
+                renderer: TextRenderer::new(Transform::new(), "", font),
             },
             Transform::pos(position),
         )

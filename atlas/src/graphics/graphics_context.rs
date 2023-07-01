@@ -43,30 +43,11 @@ impl GraphicsContext {
     pub fn new(title: &str) -> Result<Self, GameError> {
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
 
-        let (mut window, event_channel) =
-            match glfw.create_window(800, 600, title, glfw::WindowMode::Windowed) {
-                Some(result) => Ok(result),
-                None => Err(GameError::new("Failed to create window")),
-            }?;
-
-        glfw.with_primary_monitor(|_glfw, monitor| match monitor {
-            Some(monitor) => {
-                if let Some(video_mode) = monitor.get_video_mode() {
-                    window.set_monitor(
-                        glfw::WindowMode::FullScreen(monitor),
-                        0,
-                        0,
-                        video_mode.width,
-                        video_mode.height,
-                        Some(60),
-                    );
-                    Ok(())
-                } else {
-                    Err(GameError::new("Failed to get video mode"))
-                }
-            }
-            None => Err(GameError::new("Failed to get monitor")),
-        })?;
+        let (mut window, event_channel) = glfw
+            .with_primary_monitor(|glfw, monitor| {
+                glfw.create_window(1920, 1080, title, glfw::WindowMode::FullScreen(monitor?))
+            })
+            .ok_or(GameError::new("Failed to initialize window"))?;
 
         window.make_current();
 
@@ -76,16 +57,18 @@ impl GraphicsContext {
         window.set_mouse_button_polling(true);
         window.set_key_polling(true);
 
-        glfw.set_swap_interval(glfw::SwapInterval::None);
+        //glfw.set_swap_interval(glfw::SwapInterval::None);
 
         gl::load(|e| glfw.get_proc_address_raw(e) as *const std::os::raw::c_void);
 
         unsafe {
             gl::ClearColor(0., 0., 0., 1.0);
-            gl::PointSize(10.0);
+            gl::PointSize(5.0);
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable(gl::DEPTH_TEST);
+            gl::Enable(gl::CULL_FACE);
+            //gl::CullFace(gl::FRONT);
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
         }
 

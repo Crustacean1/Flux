@@ -1,7 +1,85 @@
 #version 460 core
 
+in vec3 start;
+in vec3 end;
+in vec3 pos;
+
 out vec4 fCol;
 
+uniform sampler2D sprite;
+
+bool quadratic(vec3 coeffs, out vec2 intersection){
+    float delta2 = coeffs.y * coeffs.y - 4 * coeffs.x * coeffs.z;
+    if (delta2<0) {
+        return false;
+    }
+    float delta = sqrt(delta2);
+    intersection = vec2(coeffs.y - delta, coeffs.y + delta)/(-2 * coeffs.x);
+    return true;
+}
+
+bool intersect_sphere(vec3 ray, vec3 sphere, float radius, out vec2 intersection){
+    float a = ray.x * ray.x + ray.y * ray.y + ray.z * ray.z;
+    float b = -2 * (ray.x * sphere.x + ray.y * sphere.y + ray.z * sphere.z);
+    float c = sphere.x * sphere.x + sphere.y * sphere.y + sphere.z * sphere.z - radius * radius;
+
+    return quadratic(vec3(a,b,c), intersection);
+}
+
+bool intersect_cylinder(vec3 ray, vec3 bottom, vec3 top, float radius, out vec2 intersection){
+    vec3 dir = normalize(top - bottom);
+    vec3 perp = normalize(cross(dir, ray));
+    vec3 straight = normalize(cross(perp, dir));
+
+    float dist = abs(dot(perp, bottom));
+    if(dist > radius){
+        return false;
+    }
+
+    float delta = sqrt(radius * radius - dist * dist);
+    float center = dot(straight, bottom);
+
+    float straight_multiplier =  dot(ray, straight);
+    float dir_multiplier =  dot(ray, dir);
+    if(straight_multiplier == 0 || dir_multiplier == 0){
+        return false;
+    }
+
+    vec2 boundaries = vec2(dot(dir, bottom), dot(dir, top)) / dir_multiplier;
+    intersection = vec2(center - delta, center + delta) / straight_multiplier;
+
+    boundaries = vec2(min(boundaries.x,boundaries.y), max(boundaries.x, boundaries.y));
+    intersection = vec2(min(max(intersection.x, boundaries.x), boundaries.y), min(max(intersection.y, boundaries.x), boundaries.y));
+    return intersection.x != intersection.y;
+}
+
+vec2 min_max(vec2 v){
+    return vec2(min(v.x, v.y), max(v.x,v.y));
+}
+
 void main(){
-    fCol = vec4(1,0,1,1);
+    fCol = texture(sprite, vec2(0.5,0.5)) * vec4(1,0,1,1);
+    fCol *= 0.001;
+
+
+    vec3 ray = normalize(pos.xyz);
+
+    vec2 result = vec2(999,0);
+    vec2 intersection = vec2(0,0);
+
+    if (intersect_cylinder(ray, start, end, 0.1, intersection)){
+        result.x = min(min(result.x, intersection.x), intersection.y);
+        result.y = max(max(result.y, intersection.x), intersection.y);
+    }
+    if (intersect_sphere(ray, start, 0.1, intersection)){
+        result.x = min(min(result.x, intersection.x), intersection.y);
+        result.y = max(max(result.y, intersection.x), intersection.y);
+    }
+    if (intersect_sphere(ray, end, 0.1, intersection)){
+        result.x = min(min(result.x, intersection.x), intersection.y);
+        result.y = max(max(result.y, intersection.x), intersection.y);
+    }
+
+    float opacity = max(0,result.y - result.x);
+    fCol += vec4(1,1,1,opacity * 2);
 }

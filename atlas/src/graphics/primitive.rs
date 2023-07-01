@@ -45,6 +45,7 @@ impl<Vertex: BufferElement, Index: IndexGeometry> Primitive<Vertex, Index> {
         unsafe {
             self.use_vao(|| {
                 gl::DrawElements(
+                    //gl::POINTS,
                     Index::GEOMETRY,
                     self.index_count(),
                     gl::UNSIGNED_INT,

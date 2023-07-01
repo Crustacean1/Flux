@@ -1,7 +1,6 @@
 pub mod button_handler;
 pub mod button_trigger;
 pub mod camera;
-pub mod controller;
 pub mod mesh_renderer;
 pub mod particle_emitter;
 pub mod physical_body;

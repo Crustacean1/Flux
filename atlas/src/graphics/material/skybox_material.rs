@@ -27,12 +27,11 @@ impl Default for SkyboxMaterial {
 impl Material for SkyboxMaterial {
     type Shader = SkyboxShader;
 
-    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
+    fn bind(&self) {
         unsafe {
             self.sides.iter().enumerate().for_each(|(i, side)| {
                 gl::ActiveTexture(gl::TEXTURE0 + i as u32);
                 side.bind();
-                shader.bind_billboard(i, i as i32);
             });
         }
     }

@@ -56,6 +56,19 @@ impl EntityManager {
         id
     }
 
+    pub fn remove<T: 'static>(&mut self, id: usize) {
+        self.entities.iter_mut().find_map(|container| {
+            container
+                .downcast_mut::<Vec<GameEntity<T>>>()
+                .map(|container| {
+                    container
+                        .iter()
+                        .position(|e| e.id == id)
+                        .map(|pos| container.remove(pos));
+                })
+        });
+    }
+
     pub fn get<T: 'static>(&self, id: usize) -> Option<&GameEntity<T>> {
         self.entities.iter().find_map(|container| {
             let container = container.downcast_ref::<Vec<GameEntity<T>>>()?;

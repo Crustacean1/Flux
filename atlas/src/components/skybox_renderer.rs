@@ -60,7 +60,7 @@ impl SkyboxRendererSystem {
         entity_manager
             .get_view()
             .for_each(|skybox: &SkyboxRenderer| {
-                skybox.material.bind(&self.shader);
+                skybox.material.bind();
 
                 let (projection, view) = camera.projection_view(camera_transform);
 

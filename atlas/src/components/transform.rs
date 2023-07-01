@@ -1,4 +1,4 @@
-use glam::{Mat3, Mat4, Quat, Vec3, Vec4};
+use glam::{Mat3, Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 
 #[derive(Clone, Copy)]
 pub struct Transform {
@@ -26,6 +26,19 @@ impl Transform {
 
     pub fn model(&self) -> Mat4 {
         self.translation() * self.rotation() * self.scale()
+    }
+
+    pub fn to_global(&self, vec: Vec4) -> Vec4 {
+        self.model() * vec
+    }
+
+    pub fn compose(&self, transform: &Transform) -> Transform {
+        let pos = self.model() * Vec4::from((transform.position, 1.0));
+        Transform {
+            position: pos.xyz(),
+            scale: self.scale,
+            rotation: self.rotation,
+        }
     }
 
     fn scale(&self) -> Mat4 {

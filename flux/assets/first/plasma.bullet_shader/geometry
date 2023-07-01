@@ -1,0 +1,77 @@
+#version 460 core
+
+layout(points) in;
+layout(triangle_strip, max_vertices=18) out;
+
+uniform mat4 projection;
+uniform mat4 view;
+
+in mat4 vTransform[];
+
+out vec3 start;
+out vec3 end;
+out vec3 pos;
+
+float bullet_base = 0.1;
+float bullet_length = 0.4;
+
+vec2 front[4] = {   
+            vec2(-bullet_base,-bullet_base),
+            vec2(bullet_base,-bullet_base),
+            vec2(-bullet_base,bullet_base),
+            vec2(bullet_base,bullet_base)};
+
+vec2 back[4] = {   
+            vec2(-bullet_base,-bullet_base),
+            vec2(-bullet_base,bullet_base),
+            vec2(bullet_base,-bullet_base),
+            vec2(bullet_base,bullet_base)};
+
+vec2 sides[4] = {
+                    vec2(-bullet_base,-bullet_base),
+                    vec2(bullet_base,-bullet_base),
+                    vec2(bullet_base,bullet_base),
+                    vec2(-bullet_base,bullet_base)};
+
+void main(){
+    vec3 view_start = (view * vTransform[0] * vec4(0,0,-bullet_length + bullet_base,1)).xyz;
+    vec3 view_end = (view * vTransform[0] * vec4(0,0,bullet_length - bullet_base,1)).xyz;
+
+    for(int i = 0;i<4;++i){
+        vec4 vertex = view * vTransform[0] * vec4(back[i],-bullet_length,1);
+        pos = vertex.xyz;
+        start = view_start;
+        end = view_end;
+        gl_Position = projection * vertex;
+        EmitVertex();
+    }
+    EndPrimitive();
+
+    for(int i = 0;i<4;++i){
+        vec4 vertex = view * vTransform[0] * vec4(front[i],bullet_length,1);
+        pos = vertex.xyz;
+        start = view_start;
+        end = view_end;
+        gl_Position = projection * vertex;
+        EmitVertex();
+    }
+    EndPrimitive();
+
+    for(int i = 0;i<5;++i){
+        vec4 vertex1 = view * vTransform[0] * vec4(sides[i&3], bullet_length, 1);
+        pos = vertex1.xyz;
+        start = view_start;
+        end = view_end;
+        gl_Position = projection * vertex1;
+        EmitVertex();
+
+        vec4 vertex2 = view * vTransform[0] * vec4(sides[i&3], -bullet_length, 1);
+        pos = vertex2.xyz;
+        start = view_start;
+        end = view_end;
+        gl_Position = projection * vertex2;
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+

@@ -71,8 +71,8 @@ impl Font {
             .map(|(i, _)| {
                 let offset = i as u32 * 4;
                 [
-                    TriangleGeometry([offset + 0, offset + 1, offset + 2]),
-                    TriangleGeometry([offset + 2, offset + 3, offset + 0]),
+                    TriangleGeometry([offset + 1, offset + 0, offset + 2]),
+                    TriangleGeometry([offset + 3, offset + 2, offset + 0]),
                 ]
             })
             .flatten()
@@ -102,7 +102,8 @@ pub fn load_font(
             if let Ok(font_files) = fs::read_dir(dir) {
                 if let Some(font_file) = font_files.filter_map(|font| font.ok()).find(|font| {
                     font.path().extension().map_or(false, |font| {
-                        font.to_str().map_or(false, |font| font == "ttf")
+                        font.to_str()
+                            .map_or(false, |font| ["ttf", "otf"].contains(&font))
                     })
                 }) {
                     match load_font_file(&font_file.path(), freetype) {

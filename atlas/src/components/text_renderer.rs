@@ -26,16 +26,18 @@ impl TextRendererSystem {
 pub struct TextRenderer {
     text: String,
     primitive: Primitive<P2TVertex, TriangleGeometry>,
+    transform: Transform,
     font: Font,
 }
 
 impl TextRenderer {
-    pub fn new(text: &str, font: Font) -> Self {
+    pub fn new(transform: Transform, text: &str, font: Font) -> Self {
         let mut primitive = Primitive::new(&vec![], &vec![]);
         font.render(text, &mut primitive);
 
         TextRenderer {
             text: String::from(text),
+            transform,
             primitive,
             font,
         }
@@ -55,15 +57,21 @@ impl TextRenderer {
     }
 }
 
-impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a TextRenderer)> for EntityManager {
-    fn get_view(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a TextRenderer)> + 'a> {
-        let labels = self
-            .iter::<UiLabel>()
-            .map(|label| (&label.transform, &label.entity.renderer));
+impl<'a> ComponentIteratorGenerator<'a, (Transform, &'a TextRenderer)> for EntityManager {
+    fn get_view(&'a self) -> Box<dyn Iterator<Item = (Transform, &'a TextRenderer)> + 'a> {
+        let labels = self.iter::<UiLabel>().map(|label| {
+            (
+                label.transform.compose(&label.entity.renderer.transform),
+                &label.entity.renderer,
+            )
+        });
 
-        let huds = self
-            .iter::<HudEntity>()
-            .map(|hud| (&hud.transform, &hud.entity.enemy_name));
+        let huds = self.iter::<HudEntity>().map(|hud| {
+            (
+                hud.transform.compose(&hud.entity.velocity.transform),
+                &hud.entity.velocity,
+            )
+        });
 
         Box::new(labels.chain(huds))
     }
@@ -74,7 +82,7 @@ impl TextRendererSystem {
         self.shader.bind();
 
         entity_manager.get_view().for_each(
-            |(transform, text_renderer): (&Transform, &TextRenderer)| {
+            |(transform, text_renderer): (Transform, &TextRenderer)| {
                 let projection_view_model = camera.projection() * transform.model();
 
                 text_renderer.font.bind();

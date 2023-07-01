@@ -1,5 +1,3 @@
-use glam::Mat4;
-
 use crate::{
     components::{camera::Camera, transform::Transform},
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -9,7 +7,7 @@ use crate::{
         shaders::{bullet_shader::BulletShader, ShaderProgram},
         vertices::{
             bullet::bullet,
-            indices::{LineGeometry, TriangleGeometry},
+            indices::{LineGeometry, PointGeometry},
             layouts::{Attribute, BufferElement, PVertex},
         },
     },
@@ -41,13 +39,13 @@ impl BufferElement for BulletInstance {
 
 pub struct BulletRenderer {
     shader: ShaderProgram<BulletShader>,
-    meshes: InstancedPrimitive<BulletInstance, PVertex, TriangleGeometry>,
+    meshes: InstancedPrimitive<BulletInstance, PVertex, PointGeometry>,
     bullet_instances: Vec<BulletInstance>,
 }
 
 impl BulletRenderer {
     pub fn new(shader: ShaderProgram<BulletShader>) -> Self {
-        let (vertices, indices) = bullet(0.05, 0.25);
+        let (vertices, indices) = bullet();
 
         BulletRenderer {
             shader,
@@ -66,8 +64,7 @@ impl BulletRenderer {
         let (projection, view) = camera.projection_view(camera_transform);
 
         self.shader.bind();
-        self.shader
-            .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
+        self.shader.bind_projection_view(&projection, &view);
         self.meshes.load_instances(&self.bullet_instances);
         self.meshes.render();
     }

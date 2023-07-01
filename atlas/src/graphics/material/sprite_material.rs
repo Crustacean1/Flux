@@ -27,7 +27,7 @@ impl Default for SpriteMaterial {
 
 impl Material for SpriteMaterial {
     type Shader = SpriteShader;
-    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
+    fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.tex.bind();

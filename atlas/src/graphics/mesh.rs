@@ -20,7 +20,7 @@ pub struct Skybox {
 impl Mesh {
     pub fn render(&self, shader: &ShaderProgram<MeshShader>) {
         self.primitives.iter().for_each(|(material, primitive)| {
-            material.bind(shader);
+            material.bind();
             primitive.render();
         });
     }

@@ -28,10 +28,10 @@ struct PointLight{
 };
 
 vec3 cast_light(Material material, DirectionalLight light){
-    vec3 ambient = vec3(1,1,1) * light.ambient;
+    vec3 ambient = light.ambient * texture(material.diffuse, vTex).xyz;
 
     vec3 diffuse = light.diffuse * texture(material.diffuse, vTex).xyz;
-    diffuse *= dot(-light.direction, vNorm);
+    diffuse *= dot(-light.direction, normalize(vNorm));
 
     vec3 specular = vec3(1,1,1) * light.specular;
     vec3 reflection = reflect(light.direction, vNorm);
@@ -51,5 +51,5 @@ void main() {
         fCol += vec4(cast_light(material, directional_lights[i]), 0);
     }
     //fCol *= 0.00001;
-    //fCol += vec4(vTex, 0,1);
+    //fCol += texture(material.diffuse, vTex);
 }

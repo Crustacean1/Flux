@@ -20,18 +20,17 @@ pub struct PhongMaterial {
 impl Default for PhongMaterial {
     fn default() -> Self {
         Self {
-            diffuse: Texture::from_color((0.2,0.2,0.2)),
+            diffuse: Texture::from_color((0.2, 0.2, 0.2)),
         }
     }
 }
 
 impl Material for PhongMaterial {
     type Shader = MeshShader;
-    fn bind(&self, shader: &ShaderProgram<Self::Shader>) {
+    fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.diffuse.bind();
-            shader.bind_diffuse(0);
         }
     }
 }

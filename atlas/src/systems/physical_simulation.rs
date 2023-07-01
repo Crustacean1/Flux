@@ -6,7 +6,10 @@ use crate::{
         transform::Transform,
     },
     entity_manager::{ComponentIteratorGenerator, ComponentMutIteratorGenerator, EntityManager},
-    game_entities::{enemy_ship::EnemyShip, player_ship::PlayerShip},
+    game_entities::{
+        asteroid::AsteroidEntity, bullet::BulletEntity, enemy_ship::EnemyShip,
+        player_ship::PlayerShip,
+    },
 };
 
 pub struct PhysicalSimulation {
@@ -29,7 +32,15 @@ impl<'a> ComponentIteratorGenerator<'a, (usize, &'a Transform, &'a PhysicalBody)
             .iter::<PlayerShip>()
             .map(|ship| (ship.id, &ship.transform, &ship.entity.physical_body));
 
-        Box::new(enemies.chain(players))
+        let asteroids = self
+            .iter::<AsteroidEntity>()
+            .map(|asteroid| (asteroid.id, &asteroid.transform, &asteroid.entity.body));
+
+        let bullets = self
+            .iter::<BulletEntity>()
+            .map(|bullet| (bullet.id, &bullet.transform, &bullet.entity.body));
+
+        Box::new(enemies.chain(players).chain(asteroids).chain(bullets))
     }
 }
 

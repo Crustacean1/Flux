@@ -2,5 +2,5 @@ use crate::components::{sprite_renderer::SpriteRenderer, text_renderer::TextRend
 
 pub struct HudEntity {
     pub crosshair: SpriteRenderer,
-    pub enemy_name: TextRenderer,
+    pub velocity: TextRenderer,
 }

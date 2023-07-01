@@ -18,7 +18,7 @@ fn tex_quad() -> impl Iterator<Item = [f32; 2]> {
 }
 
 fn index_quad() -> Vec<TriangleGeometry> {
-    vec![TriangleGeometry([0, 1, 2]), TriangleGeometry([1, 2, 3])]
+    vec![TriangleGeometry([1, 0, 2]), TriangleGeometry([2, 1, 3])]
 }
 
 pub fn quad(width: f32, height: f32) -> (Vec<P2TVertex>, Vec<TriangleGeometry>) {
