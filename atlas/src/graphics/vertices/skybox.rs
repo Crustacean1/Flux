@@ -28,6 +28,13 @@ pub fn skybox(side: f32) -> (Vec<PTVertex>, Vec<TriangleGeometry>, Vec<SkyboxIns
 
     let vertices: Vec<_> = pos.zip(tex).map(|(pos, tex)| PTVertex(pos, tex)).collect();
 
+    indices
+        .iter()
+        .for_each(|vertex| println!("Skybox indices: {:?}", vertex));
+    vertices
+        .iter()
+        .for_each(|vertex| println!("Skybox vertices: {:?}", vertex));
+
     let instances = instances_skybox();
 
     (vertices, indices, instances)

@@ -8,10 +8,9 @@ use std::path::PathBuf;
 
 use crate::game_root::GameError;
 
-use super::{shaders::ShaderProgram, texture::Texture};
+use super::texture::Texture;
 
 pub trait Material {
-    type Shader: Clone;
     fn bind(&self);
 }
 

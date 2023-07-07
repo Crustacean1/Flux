@@ -26,7 +26,6 @@ impl Default for PhongMaterial {
 }
 
 impl Material for PhongMaterial {
-    type Shader = MeshShader;
     fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);

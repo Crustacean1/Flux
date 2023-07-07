@@ -3,11 +3,11 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::bullet::BulletEntity,
     graphics::{
-        instanced_primitive::InstancedPrimitive,
+        instanced_mesh::InstancedMesh,
         shaders::{bullet_shader::BulletShader, ShaderProgram},
         vertices::{
             bullet::bullet,
-            indices::{LineGeometry, PointGeometry},
+            indices::PointGeometry,
             layouts::{Attribute, BufferElement, PVertex},
         },
     },
@@ -22,7 +22,7 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a BulletEntity)> for E
     }
 }
 
-struct BulletInstance {
+pub struct BulletInstance {
     pub transform: [f32; 16],
 }
 
@@ -38,18 +38,18 @@ impl BufferElement for BulletInstance {
 }
 
 pub struct BulletRenderer {
-    shader: ShaderProgram<BulletShader>,
-    meshes: InstancedPrimitive<BulletInstance, PVertex, PointGeometry>,
+    shader: BulletShader,
+    meshes: InstancedMesh<BulletInstance, PVertex, PointGeometry>,
     bullet_instances: Vec<BulletInstance>,
 }
 
 impl BulletRenderer {
-    pub fn new(shader: ShaderProgram<BulletShader>) -> Self {
+    pub fn new(shader: BulletShader) -> Self {
         let (vertices, indices) = bullet();
 
         BulletRenderer {
             shader,
-            meshes: InstancedPrimitive::new(&vertices, &indices, &vec![]),
+            meshes: InstancedMesh::new(&vertices, &indices, &vec![]),
             bullet_instances: vec![],
         }
     }
@@ -61,11 +61,12 @@ impl BulletRenderer {
         camera_transform: &Transform,
     ) {
         self.reload_instances(entity_manager);
-        let (projection, view) = camera.projection_view(camera_transform);
-
-        self.shader.bind();
-        self.shader.bind_projection_view(&projection, &view);
         self.meshes.load_instances(&self.bullet_instances);
+
+        let (projection, view) = camera.projection_view(camera_transform);
+        let pass = self.shader.new_pass(&projection, &view);
+
+        pass.render(&self.meshes);
         self.meshes.render();
     }
 

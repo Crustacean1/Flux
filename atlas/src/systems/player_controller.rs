@@ -127,7 +127,7 @@ impl PlayerController {
                         BulletEntity {
                             collider: Collider { radius: 0.5 },
                             body: body1,
-                            lifetime: 200.0,
+                            lifetime: 2.0,
                         },
                     ));
                     event_sender.write(GameEvent::ShootPlasmaBullet(
@@ -135,7 +135,7 @@ impl PlayerController {
                         BulletEntity {
                             collider: Collider { radius: 0.5 },
                             body: body2,
-                            lifetime: 200.0,
+                            lifetime: 2.0,
                         },
                     ));
                 }

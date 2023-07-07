@@ -4,7 +4,7 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::{hud::HudEntity, ui_label::UiLabel},
     graphics::{
-        primitive::Primitive,
+        mesh::Mesh,
         shaders::{text_shader::TextShader, ShaderProgram},
         vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
@@ -14,25 +14,25 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
-    shader: ShaderProgram<TextShader>,
+    shader: TextShader,
 }
 
 impl TextRendererSystem {
-    pub fn new(shader: ShaderProgram<TextShader>) -> Self {
+    pub fn new(shader: TextShader) -> Self {
         TextRendererSystem { shader }
     }
 }
 
 pub struct TextRenderer {
     text: String,
-    primitive: Primitive<P2TVertex, TriangleGeometry>,
+    primitive: Mesh<P2TVertex, TriangleGeometry>,
     transform: Transform,
     font: Font,
 }
 
 impl TextRenderer {
     pub fn new(transform: Transform, text: &str, font: Font) -> Self {
-        let mut primitive = Primitive::new(&vec![], &vec![]);
+        let mut primitive = Mesh::new(&vec![], &vec![]);
         font.render(text, &mut primitive);
 
         TextRenderer {
@@ -43,7 +43,7 @@ impl TextRenderer {
         }
     }
 
-    pub fn primitive(&self) -> &Primitive<P2TVertex, TriangleGeometry> {
+    pub fn primitive(&self) -> &Mesh<P2TVertex, TriangleGeometry> {
         &self.primitive
     }
 
@@ -86,10 +86,9 @@ impl TextRendererSystem {
                 let projection_view_model = camera.projection() * transform.model();
 
                 text_renderer.font.bind();
-                self.shader
-                    .bind_projection_view_model(&projection_view_model.to_cols_array());
-                self.shader.bind_atlas(0);
 
+                let pass = self.shader.new_pass();
+                pass.render(text_renderer.primitive(), &projection_view_model, 0);
                 text_renderer.primitive().render();
             },
         );

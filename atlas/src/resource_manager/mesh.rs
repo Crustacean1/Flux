@@ -12,8 +12,8 @@ use gltf::{
 
 use crate::graphics::{
     material::phong_material::PhongMaterial,
+    model::Model,
     mesh::Mesh,
-    primitive::Primitive,
     vertices::{indices::TriangleGeometry, layouts::PTNVertex},
 };
 
@@ -53,7 +53,7 @@ pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager
     }
 }
 
-fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh {
+fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Model {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
@@ -107,14 +107,14 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Mesh {
                             PhongMaterial::default()
                         };
 
-                        Some((material, Primitive::new(&vertices, &indices)))
+                        Some((material, Mesh::new(&vertices, &indices)))
                     })
                     .collect(),
             )
         })
         .flatten()
         .collect();
-    return Mesh { primitives };
+    return Model { meshes: primitives };
 }
 
 fn load_buffers(buffers: Buffers, blob: &[u8]) -> Vec<Vec<u8>> {

@@ -8,15 +8,15 @@ use crate::{
     game_root::GameError,
     graphics::{
         material::phong_material::PhongMaterial,
+        model::Model,
         mesh::Mesh,
-        primitive::Primitive,
         texture::{ChannelLayout, Texture},
         vertices::asteroid::asteroid,
     },
 };
 
 pub struct AsteroidEntity {
-    pub mesh: Mesh,
+    pub mesh: Model,
     pub body: PhysicalBody,
     pub collider: Collider,
 }
@@ -24,7 +24,7 @@ pub struct AsteroidEntity {
 impl AsteroidEntity {
     pub fn prefab(material: PhongMaterial, radius: f32) -> Self {
         let (vertices, indices) = asteroid(radius, 15);
-        let primitive = Primitive::new(&vertices, &indices);
+        let primitive = Mesh::new(&vertices, &indices);
         let mut rnd = rand::thread_rng();
         let mut body = PhysicalBody::new(100.0, 100.0);
         body.momentum = Vec3::new(
@@ -33,8 +33,8 @@ impl AsteroidEntity {
             rnd.gen_range(-150.0..150.0),
         );
         Self {
-            mesh: Mesh {
-                primitives: vec![(material, primitive)],
+            mesh: Model {
+                meshes: vec![(material, primitive)],
             },
             body,
             collider: Collider { radius: radius *1.1},

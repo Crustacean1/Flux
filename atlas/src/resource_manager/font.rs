@@ -6,7 +6,7 @@ use glad_gl::gl;
 use crate::{
     game_root::GameError,
     graphics::{
-        primitive::Primitive,
+        mesh::Mesh,
         texture::{ChannelLayout, Texture},
         vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
@@ -35,7 +35,7 @@ impl Default for Font {
 }
 
 impl Font {
-    pub fn render(&self, text: &str, target: &mut Primitive<P2TVertex, TriangleGeometry>) {
+    pub fn render(&self, text: &str, target: &mut Mesh<P2TVertex, TriangleGeometry>) {
         let (mut x, y) = (0.0, 0.0);
         let char_quads: Vec<_> = text
             .bytes()

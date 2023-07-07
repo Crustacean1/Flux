@@ -1,15 +1,11 @@
-use glam::Mat4;
-
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::space_box::SpaceBox,
     graphics::{
-        instanced_primitive::InstancedPrimitive,
+        instanced_mesh::InstancedMesh,
         material::{skybox_material::SkyboxMaterial, Material},
-        primitive::Primitive,
         shaders::{skybox_shader::SkyboxShader, ShaderProgram},
         vertices::{
-            generator,
             indices::TriangleGeometry,
             layouts::PTVertex,
             skybox::{self, SkyboxInstance},
@@ -21,18 +17,18 @@ use super::{camera::Camera, transform::Transform};
 
 pub struct SkyboxRenderer {
     material: SkyboxMaterial,
-    mesh: InstancedPrimitive<SkyboxInstance, PTVertex, TriangleGeometry>,
+    mesh: InstancedMesh<SkyboxInstance, PTVertex, TriangleGeometry>,
 }
 
 pub struct SkyboxRendererSystem {
-    shader: ShaderProgram<SkyboxShader>,
+    shader: SkyboxShader,
 }
 
 impl SkyboxRenderer {
     pub fn new(size: f32, material: SkyboxMaterial) -> Self {
         let (vertices, indices, instances) = skybox::skybox(size);
         SkyboxRenderer {
-            mesh: InstancedPrimitive::new(&vertices, &indices, &instances),
+            mesh: InstancedMesh::new(&vertices, &indices, &instances),
             material,
         }
     }
@@ -64,13 +60,12 @@ impl SkyboxRendererSystem {
 
                 let (projection, view) = camera.projection_view(camera_transform);
 
-                self.shader
-                    .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
-                skybox.mesh.render();
+                let pass = self.shader.new_pass(&projection, &view);
+                pass.render(&skybox.mesh);
             });
     }
 
-    pub fn new(shader: ShaderProgram<SkyboxShader>) -> Self {
+    pub fn new(shader: SkyboxShader) -> Self {
         SkyboxRendererSystem { shader }
     }
 }

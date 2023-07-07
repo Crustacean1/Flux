@@ -25,8 +25,6 @@ impl Default for SkyboxMaterial {
 }
 
 impl Material for SkyboxMaterial {
-    type Shader = SkyboxShader;
-
     fn bind(&self) {
         unsafe {
             self.sides.iter().enumerate().for_each(|(i, side)| {

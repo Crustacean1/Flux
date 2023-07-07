@@ -11,7 +11,7 @@ use crate::game_root::GameError;
 
 use super::{
     font::load_font, indexer::index_resources, material::load_mat, mesh::load_mesh,
-    resource::Resource, shader::load_shader, ResourceManager,
+    resource::Resource, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -65,9 +65,9 @@ impl SceneResourceManager {
             load_font(res_id, ext, dir, &mut freetype_lib, &mut res_man)
         });
 
-        resource_index
+        /*resource_index
             .iter()
-            .for_each(|(res_id, ext, dir)| load_shader(res_id, ext, dir, &mut res_man));
+            .for_each(|(res_id, ext, dir)| load_shader(res_id, ext, dir, &mut res_man));*/
 
         resource_index
             .iter()

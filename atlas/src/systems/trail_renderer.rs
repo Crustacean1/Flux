@@ -6,8 +6,8 @@ use crate::{
     },
     entity_manager::{self, ComponentIteratorGenerator, EntityManager},
     graphics::{
-        instanced_primitive::InstancedPrimitive,
-        primitive::Primitive,
+        instanced_mesh::InstancedMesh,
+        mesh::Mesh,
         shaders::{flat_shader::FlatShader, ShaderProgram},
         vertices::{
             indices::{LineGeometry, PointGeometry},
@@ -27,15 +27,15 @@ impl BufferElement for TrailInstance {
 pub struct TrailRenderer {
     vertices: Vec<PVertex>,
     indices: Vec<LineGeometry>,
-    mesh: Primitive<PVertex, LineGeometry>,
-    shader: ShaderProgram<FlatShader>,
+    mesh: Mesh<PVertex, LineGeometry>,
+    shader: FlatShader,
 }
 
 impl TrailRenderer {
-    pub fn new(shader: ShaderProgram<FlatShader>) -> Self {
+    pub fn new(shader: FlatShader) -> Self {
         let (vertices, indices) = ([PVertex([0.0, 0.0, 0.0])], [LineGeometry([0, 0])]);
         Self {
-            mesh: Primitive::new(&vertices, &indices),
+            mesh: Mesh::new(&vertices, &indices),
             vertices: vec![],
             indices: vec![],
             shader,

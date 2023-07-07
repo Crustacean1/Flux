@@ -7,9 +7,9 @@ use crate::{
         starlight::Starlight,
     },
     graphics::{
-        lights::Light,
-        material::phong_material::PhongMaterial,
-        mesh::Mesh,
+        lights::{Light, LightColor},
+        material::{phong_material::PhongMaterial, Material},
+        model::Model,
         shaders::{mesh_shader::MeshShader, ShaderProgram},
     },
 };
@@ -17,16 +17,16 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct MeshRenderer {
-    pub mesh: Mesh,
+    pub mesh: Model,
     pub material: PhongMaterial,
 }
 
 pub struct MeshRendererSystem {
-    shader: ShaderProgram<MeshShader>,
+    shader: MeshShader,
 }
 
-impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Mesh)> for EntityManager {
-    fn get_view(&'a self) -> Box<dyn Iterator<Item = (&Transform, &Mesh)> + 'a> {
+impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Model)> for EntityManager {
+    fn get_view(&'a self) -> Box<dyn Iterator<Item = (&Transform, &Model)> + 'a> {
         let enemies = self
             .iter::<EnemyShip>()
             .map(|ship| (&ship.transform, &ship.entity.mesh));
@@ -52,7 +52,7 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Light)> for EntityMa
 }
 
 impl MeshRendererSystem {
-    pub fn new(shader: ShaderProgram<MeshShader>) -> Self {
+    pub fn new(shader: MeshShader) -> Self {
         MeshRendererSystem { shader }
     }
 
@@ -64,26 +64,34 @@ impl MeshRendererSystem {
     ) -> Option<()> {
         let (projection, view) = camera.projection_view(&camera_transform);
 
-        self.shader.bind();
-
-        self.setup_lights(entity_manager, camera, camera_transform);
+        let lights = Self::get_lights(entity_manager);
+        let pass = self.shader.new_pass(&lights);
 
         entity_manager
             .get_view()
-            .for_each(|(transform, mesh): (&Transform, &Mesh)| {
+            .for_each(|(transform, model): (&Transform, &Model)| {
                 let view_model = view * transform.model();
                 let projection_view_model = projection * view * transform.model();
 
-                self.shader
-                    .bind_projection_view_model(&projection_view_model.to_cols_array());
-                self.shader.bind_view_model(&view_model.to_cols_array());
-
-                mesh.render(&self.shader);
+                model.meshes.iter().for_each(|(material, mesh)| {
+                    material.bind();
+                    pass.render(&view_model, &projection_view_model, mesh);
+                });
             });
         Some(())
     }
 
-    fn setup_lights(
+    fn get_lights(entity_manager: &EntityManager) -> Vec<(Vec3, LightColor)> {
+        entity_manager
+            .get_view()
+            .map(|(transform, &light): (&Transform, &Light)| match light {
+                Light::PointLight(_) => todo!(),
+                Light::DirectionalLight(direction, color) => (direction, color),
+            })
+            .collect()
+    }
+
+    /*fn setup_lights(
         &self,
         entity_manager: &EntityManager,
         camera: &Camera,
@@ -91,6 +99,8 @@ impl MeshRendererSystem {
     ) {
         let (_, view) = camera.projection_view(camera_transform);
         let mut directional_lights = 0;
+
+        let pass = self.shader.new_pass(self.)
 
         entity_manager.get_view().enumerate().for_each(
             |(i, (transform, light)): (_, (&Transform, &Light))| match light {
@@ -107,5 +117,5 @@ impl MeshRendererSystem {
             },
         );
         self.shader.bind_directional_light_count(directional_lights);
-    }
+    }*/
 }

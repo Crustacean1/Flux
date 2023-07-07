@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use glad_gl::gl;
 
-use crate::{
-    game_root::GameError,
-    graphics::{shaders::bullet_shader::BulletShader, texture::Texture},
-};
+use crate::{game_root::GameError, graphics::texture::Texture};
 
 use super::Material;
 
@@ -23,8 +20,6 @@ impl Default for BulletMaterial {
 }
 
 impl Material for BulletMaterial {
-    type Shader = BulletShader;
-
     fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);

@@ -6,8 +6,8 @@ use crate::{
     },
     entity_manager::{self, ComponentIteratorGenerator, EntityManager},
     graphics::{
-        instanced_primitive::InstancedPrimitive,
-        primitive::Primitive,
+        instanced_mesh::InstancedMesh,
+        mesh::Mesh,
         shaders::{flat_shader::FlatShader, ShaderProgram},
         vertices::{
             indices::TriangleGeometry,
@@ -33,15 +33,15 @@ impl BufferElement for CollisionInstance {
 }
 
 pub struct CollisionRenderer {
-    sphere: InstancedPrimitive<CollisionInstance, PTNVertex, TriangleGeometry>,
-    shader: ShaderProgram<FlatShader>,
+    sphere: InstancedMesh<CollisionInstance, PTNVertex, TriangleGeometry>,
+    shader: FlatShader,
     instances: Vec<CollisionInstance>,
 }
 
 impl CollisionRenderer {
-    pub fn new(shader: ShaderProgram<FlatShader>) -> Self {
+    pub fn new(shader: FlatShader) -> Self {
         let (vertices, indices) = sphere(1.0, 50);
-        let sphere = InstancedPrimitive::new(&vertices, &indices, &vec![]);
+        let sphere = InstancedMesh::new(&vertices, &indices, &vec![]);
 
         Self {
             instances: vec![],

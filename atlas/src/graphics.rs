@@ -1,9 +1,10 @@
 pub mod graphics_context;
+pub mod instanced_mesh;
+pub mod lights;
 pub mod material;
 pub mod mesh;
+pub mod model;
 pub mod shaders;
-pub mod vertices;
 pub mod texture;
-pub mod primitive;
-pub mod lights;
-pub mod instanced_primitive;
+pub mod vertices;
+pub mod context;

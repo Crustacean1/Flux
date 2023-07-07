@@ -2,7 +2,7 @@ use glad_gl::gl;
 use std::ptr;
 
 use super::{
-    primitive::Primitive,
+    mesh::Mesh,
     vertices::{
         buffer::{Buffer, BufferTarget},
         indices::IndexGeometry,
@@ -11,26 +11,23 @@ use super::{
 };
 
 #[derive(Clone)]
-pub struct InstancedPrimitive<
-    InstancedData: BufferElement,
-    Vertex: BufferElement,
-    Index: IndexGeometry,
-> {
-    primitive: Primitive<Vertex, Index>,
+pub struct InstancedMesh<InstancedData: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
+{
+    primitive: Mesh<Vertex, Index>,
     instanced_buffer: Buffer<InstancedData>,
 }
 
 impl<Instance: BufferElement, Vertex: BufferElement, Index: IndexGeometry>
-    InstancedPrimitive<Instance, Vertex, Index>
+    InstancedMesh<Instance, Vertex, Index>
 {
     pub fn new(vertices: &[Vertex], indices: &[Index], data: &[Instance]) -> Self {
-        let primitive = Primitive::new(vertices, indices);
+        let primitive = Mesh::new(vertices, indices);
         let instanced_buffer = Buffer::build(data, BufferTarget::Vertex);
         let start_attrib = Vertex::layout().len();
 
         primitive.use_vao(|| {
             instanced_buffer.bind();
-            Primitive::<Vertex, Index>::declare_layout(&Instance::layout(), start_attrib, 1);
+            Mesh::<Vertex, Index>::declare_layout(&Instance::layout(), start_attrib, 1);
         });
 
         Self {

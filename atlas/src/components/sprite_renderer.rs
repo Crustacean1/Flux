@@ -3,7 +3,7 @@ use crate::{
     game_entities::{hud::HudEntity, sprite::Sprite},
     graphics::{
         material::{sprite_material::SpriteMaterial, Material},
-        primitive::Primitive,
+        mesh::Mesh,
         shaders::{ui_shader::SpriteShader, ShaderProgram},
         vertices::{crosshair, generator, indices::TriangleGeometry, layouts::P2TVertex},
     },
@@ -12,7 +12,7 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct SpriteRenderer {
-    pub quad: Primitive<P2TVertex, TriangleGeometry>,
+    pub quad: Mesh<P2TVertex, TriangleGeometry>,
     pub material: SpriteMaterial,
 }
 
@@ -20,24 +20,24 @@ impl SpriteRenderer {
     pub fn quad((width, height): (f32, f32), material: SpriteMaterial) -> SpriteRenderer {
         let (vertices, indices) = generator::quad(width, height);
         SpriteRenderer {
-            quad: Primitive::new(&vertices, &indices),
+            quad: Mesh::new(&vertices, &indices),
             material,
         }
     }
 
     pub fn crosshair(material: SpriteMaterial) -> Self {
         let (vertices, indices) = crosshair::crosshair();
-        let quad = Primitive::new(&vertices, &indices);
+        let quad = Mesh::new(&vertices, &indices);
         Self { quad, material }
     }
 }
 
 pub struct SpriteRendererSystem {
-    shader: ShaderProgram<SpriteShader>,
+    shader: SpriteShader,
 }
 
 impl SpriteRendererSystem {
-    pub fn new(shader: ShaderProgram<SpriteShader>) -> Self {
+    pub fn new(shader: SpriteShader) -> Self {
         SpriteRendererSystem { shader }
     }
 }
@@ -59,13 +59,13 @@ impl SpriteRendererSystem {
     pub fn render(&self, entity_manager: &EntityManager, camera: &Camera) {
         let projection = camera.projection();
         self.shader.bind();
+        let pass = self.shader.new_pass();
         entity_manager
             .get_view()
             .for_each(|(transform, shape): (&Transform, &SpriteRenderer)| {
                 shape.material.bind();
                 let mvp = projection * transform.model();
-                self.shader.bind_projection_view_model(&mvp.to_cols_array());
-                shape.quad.render();
+                pass.render(shape.quad, &mvp)
             });
     }
 }

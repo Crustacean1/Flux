@@ -1,6 +1,6 @@
 use crate::{
     components::{collider::Collider, physical_body::PhysicalBody},
-    graphics::{mesh::Mesh, primitive::Primitive, vertices::sphere::sphere},
+    graphics::{model::Model, mesh::Mesh, vertices::sphere::sphere},
     resource_manager::{self, scene_resource_manager::SceneResourceManager, ResourceManager},
 };
 

@@ -1,4 +1,4 @@
-use std::mem;
+use std::{ffi, mem};
 
 use glad_gl::gl;
 
@@ -26,6 +26,34 @@ impl Attribute {
         match *self {
             Attribute::Float(count) => count * mem::size_of::<f32>(),
             Attribute::UnsignedInt(count) => count * mem::size_of::<u32>(),
+        }
+    }
+
+    pub fn declare(&self, i: usize, count: usize, offset: usize, stride: usize) {
+        unsafe {
+            gl::EnableVertexAttribArray(i as u32);
+            match self {
+                Attribute::Float(_) => {
+                    gl::VertexAttribPointer(
+                        i as u32,
+                        count as i32,
+                        gl::FLOAT,
+                        gl::FALSE,
+                        stride as i32,
+                        offset as *const ffi::c_void,
+                    );
+                }
+
+                Attribute::UnsignedInt(_) => {
+                    gl::VertexAttribIPointer(
+                        i as u32,
+                        count as i32,
+                        gl::UNSIGNED_INT,
+                        stride as i32,
+                        offset as *const ffi::c_void,
+                    );
+                }
+            }
         }
     }
 }

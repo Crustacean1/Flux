@@ -67,7 +67,7 @@ impl GraphicsContext {
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable(gl::DEPTH_TEST);
-            gl::Enable(gl::CULL_FACE);
+            //gl::Enable(gl::CULL_FACE);
             //gl::CullFace(gl::FRONT);
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
         }

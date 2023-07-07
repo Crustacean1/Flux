@@ -26,8 +26,6 @@ impl Default for ParticleMaterial {
 }
 
 impl Material for ParticleMaterial {
-    type Shader = ParticleShader;
-
     fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);

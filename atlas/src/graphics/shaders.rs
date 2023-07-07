@@ -1,95 +1,169 @@
+use std::{ffi::CString, mem};
+
+use glad_gl::gl;
+use glam::{Mat4, Vec3};
+
+use crate::game_root::GameError;
+
+use super::context::Context;
+
+pub mod bullet_shader;
+pub mod flat_shader;
 pub mod mesh_shader;
+pub mod particle_shader;
 pub mod skybox_shader;
 pub mod text_shader;
 pub mod ui_shader;
-pub mod particle_shader;
-pub mod bullet_shader;
-pub mod flat_shader;
 
-use glad_gl::gl;
-use glam::Vec3;
-
-use crate::game_root::GameError;
-use std::{ffi::c_char, marker::PhantomData, mem, path::PathBuf};
-
-pub trait Shader<T: Clone> {
-    fn build(shader_id: u32) -> Result<T, GameError>;
+pub trait Shader {
+    type ShaderPass<'a>;
+    fn shader_id(&self) -> u32;
+    fn new_pass(&self) -> Self::ShaderPass<'a>;
 }
 
-impl From<(ShaderType, String)> for GameError {
-    fn from((shader_type, error): (ShaderType, String)) -> Self {
-        GameError::new(&format!(
-            "Shader '{:?}' compilation failed:\n{}",
-            shader_type, error
-        ))
-    }
+pub trait UniformLoader<T> {
+    fn load(&mut self, uniform: i32, value: T);
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ShaderType {
-    Vertex,
-    Fragment,
-    Geometry,
-}
-
-impl ShaderType {
-    pub fn to_gl(&self) -> u32 {
-        match self {
-            ShaderType::Vertex => gl::VERTEX_SHADER,
-            ShaderType::Fragment => gl::FRAGMENT_SHADER,
-            ShaderType::Geometry => gl::GEOMETRY_SHADER,
+fn locate_uniform(program: u32, uniform: &str) -> Option<i32> {
+    unsafe {
+        match gl::GetUniformLocation(program, CString::new(uniform).ok()?.as_ptr()) {
+            -1 => None,
+            uniform => Some(uniform),
         }
     }
 }
 
-#[derive(Clone)]
-pub struct ShaderProgram<T: Clone> {
-    shader_id: u32,
-    pub shader: T,
+fn try_locate_uniform(program: u32, uniform: &str) -> Result<i32, GameError> {
+    locate_uniform(program, uniform).ok_or(GameError::uniform(uniform))
 }
 
-impl<T: Clone + Shader<T>> ShaderProgram<T> {
-    pub fn build(shader_id: u32) -> Result<Self, GameError> {
-        let shader = Self {
-            shader_id,
-            shader: T::build(shader_id)?,
-        };
-        Ok(shader)
-    }
-
-    pub fn bind(&self) {
+impl<Q: Shader> UniformLoader<&Mat4> for Q {
+    fn load(&mut self, uniform: i32, value: &Mat4) {
         unsafe {
-            gl::UseProgram(self.shader_id);
+            gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.to_cols_array().as_ptr());
         }
     }
+}
 
-    fn load_mat(&self, mat: &[f32; 16], location: i32) {
+impl<Q: Shader> UniformLoader<i32> for Q {
+    fn load(&mut self, uniform: i32, value: i32) {
         unsafe {
-            gl::UniformMatrix4fv(location, 1, gl::FALSE, mat.as_ptr());
+            gl::Uniform1i(uniform, value);
         }
     }
+}
 
-    fn load_vec3(&self, vec: Vec3, location: i32) {
+impl<Q: Shader> UniformLoader<Vec3> for Q {
+    fn load(&mut self, uniform: i32, value: Vec3) {
         unsafe {
-            gl::Uniform3f(location, vec.x, vec.y, vec.z);
+            gl::Uniform3f(uniform, value.x, value.y, value.z);
         }
     }
+}
 
-    fn get_location(shader_id: u32, name: &str) -> Result<i32, GameError> {
-        unsafe {
-            match gl::GetUniformLocation(shader_id, mem::transmute(name.as_ptr())) {
-                -1 => GameError::err(format!(
-                    "Shader: '{}' uniform '{}' not found\n",
-                    shader_id, name
-                )),
-                location => Ok(location),
+pub fn build_shader(
+    vertex: Option<&str>,
+    geometry: Option<&str>,
+    fragment: Option<&str>,
+) -> Result<u32, GameError> {
+    let vertex = (vertex, gl::VERTEX_SHADER);
+    let geometry = (geometry, gl::GEOMETRY_SHADER);
+    let fragment = (fragment, gl::FRAGMENT_SHADER);
+
+    let shader_program = create_program()?;
+
+    [vertex, geometry, fragment]
+        .iter()
+        .filter_map(|(shader, shader_type)| Some(compile((*shader)?, *shader_type)))
+        .fold(Ok(()), |compilation_result: Result<(), GameError>, x| {
+            compilation_result?;
+            Ok(attach(shader_program, x?))
+        })?;
+
+    link_program(shader_program)
+}
+
+fn compile(source: &str, shader_type: u32) -> Result<u32, GameError> {
+    unsafe {
+        let shader_id = match gl::CreateShader(shader_type) {
+            0 => {
+                return Err(GameError::new("Failed to create shader"));
             }
+            shader => shader,
+        };
+
+        let shader_src: *const i8 = mem::transmute(source.as_ptr());
+
+        gl::ShaderSource(shader_id, 1, &shader_src, std::ptr::null());
+        gl::CompileShader(shader_id);
+
+        match check_for_errors(
+            shader_id,
+            gl::COMPILE_STATUS,
+            gl::GetShaderiv,
+            gl::GetShaderInfoLog,
+        ) {
+            Ok(_) => Ok(shader_id),
+            Err(msg) => Err(GameError::new(&format!("Compilation failed:\n{}", msg))),
         }
     }
 }
 
-impl<T: Clone> Default for ShaderProgram<T> {
-    fn default() -> Self {
-        todo!()
+fn attach(program: u32, shader: u32) {
+    unsafe {
+        gl::AttachShader(program, shader);
     }
+}
+
+fn create_program() -> Result<u32, GameError> {
+    unsafe {
+        match gl::CreateProgram() {
+            0 => Err(GameError::new("Failed to create shader program")),
+            program => Ok(program),
+        }
+    }
+}
+
+fn link_program(program: u32) -> Result<u32, GameError> {
+    unsafe {
+        gl::LinkProgram(program);
+
+        match check_for_errors(
+            program,
+            gl::LINK_STATUS,
+            gl::GetProgramiv,
+            gl::GetProgramInfoLog,
+        ) {
+            Ok(_) => Ok(program),
+            Err(msg) => Err(GameError::new(&format!("Shader linking failed:\n{}", msg))),
+        }
+    }
+}
+
+fn check_for_errors(
+    target: u32,
+    log_type: u32,
+    get_status: unsafe fn(u32, u32, *mut i32),
+    get_logs: unsafe fn(u32, i32, *mut i32, *mut i8),
+) -> Result<(), String> {
+    unsafe {
+        let mut status: i32 = 0;
+        get_status(target, log_type, &mut status);
+
+        if status == 0 {
+            let mut err_buff: Vec<u8> = vec![0; 512];
+            let mut err_length = 0;
+
+            get_logs(
+                target,
+                err_buff.len() as i32,
+                &mut err_length,
+                mem::transmute(err_buff.get_unchecked_mut(0)),
+            );
+            return Err(String::from_utf8(err_buff)
+                .expect("Compilation error message should conform to UTF-8"));
+        }
+    }
+    Ok(())
 }

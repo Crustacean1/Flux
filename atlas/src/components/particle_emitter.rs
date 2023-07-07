@@ -3,8 +3,9 @@ use glam::{Vec3, Vec4};
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     graphics::{
-        instanced_primitive::InstancedPrimitive,
+        instanced_mesh::InstancedMesh,
         material::particle_material::ParticleMaterial,
+        shaders::particle_shader::ParticleInstance,
         vertices::{
             generator,
             indices::TriangleGeometry,
@@ -14,14 +15,6 @@ use crate::{
 };
 
 use super::transform::Transform;
-
-#[repr(C)]
-#[derive(Clone, Default, Debug)]
-pub struct ParticleInstance {
-    pub position: [f32; 3],
-    pub color: [f32; 3],
-    pub transform: [f32; 4],
-}
 
 impl BufferElement for ParticleInstance {
     fn layout() -> Vec<Attribute> {
@@ -51,7 +44,7 @@ pub struct ParticleEmitterDefinition {
 
 pub struct ParticleEmitter {
     pub definition: ParticleEmitterDefinition,
-    pub mesh: InstancedPrimitive<ParticleInstance, P2TVertex, TriangleGeometry>,
+    pub mesh: InstancedMesh<ParticleInstance, P2TVertex, TriangleGeometry>,
     pub material: ParticleMaterial,
     pub spawner: &'static dyn Fn(&mut Particle),
     pub particles: Vec<Particle>,
@@ -63,7 +56,7 @@ impl ParticleEmitter {
     pub fn new(
         definition: ParticleEmitterDefinition,
         material: ParticleMaterial,
-        mesh: InstancedPrimitive<ParticleInstance, P2TVertex, TriangleGeometry>,
+        mesh: InstancedMesh<ParticleInstance, P2TVertex, TriangleGeometry>,
         spawner: &'static dyn Fn(&mut Particle),
     ) -> Self {
         Self {

@@ -22,6 +22,12 @@ impl GameError {
     pub fn err<T>(msg: String) -> Result<T, Self> {
         Err(GameError { msg })
     }
+
+    pub fn uniform(uniform: &str) -> Self {
+        GameError {
+            msg: format!("Failed to find uniform with id: '{}'", uniform),
+        }
+    }
 }
 
 impl fmt::Display for GameError {

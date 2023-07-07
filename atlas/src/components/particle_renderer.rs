@@ -1,7 +1,5 @@
-use glam::Mat4;
-
 use crate::{
-    entity_manager::{ComponentIteratorGenerator, ComponentMutIteratorGenerator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::{enemy_ship::EnemyShip, player_ship::PlayerShip},
     graphics::{
         material::Material,
@@ -12,7 +10,7 @@ use crate::{
 use super::{camera::Camera, particle_emitter::ParticleEmitter, transform::Transform};
 
 pub struct ParticleRenderer {
-    shader: ShaderProgram<ParticleShader>,
+    shader: ParticleShader,
 }
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ParticleEmitter)> for EntityManager {
@@ -28,7 +26,7 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ParticleEmitter)> fo
 }
 
 impl ParticleRenderer {
-    pub fn new(shader: ShaderProgram<ParticleShader>) -> Self {
+    pub fn new(shader: ParticleShader) -> Self {
         Self { shader }
     }
 
@@ -38,15 +36,13 @@ impl ParticleRenderer {
         camera: &Camera,
         camera_transform: &Transform,
     ) {
-        self.shader.bind();
+        let (projection, view) = camera.projection_view(camera_transform);
+        let pass = self.shader.new_pass(&projection, &view);
+
         entity_manager.get_view().for_each(
             |(transform, particle_emitter): (&Transform, &ParticleEmitter)| {
-                let (projection, view) = camera.projection_view(camera_transform);
-
                 particle_emitter.material.bind();
-                self.shader
-                    .bind_projection_view(&projection.to_cols_array(), &view.to_cols_array());
-                particle_emitter.mesh.render();
+                pass.render(&particle_emitter.mesh);
             },
         );
     }

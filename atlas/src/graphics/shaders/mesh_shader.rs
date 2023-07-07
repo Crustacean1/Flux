@@ -1,14 +1,42 @@
-use std::mem;
+use glam::{Mat4, Vec3};
 
-use glad_gl::gl;
-use glam::Vec3;
+use crate::{
+    game_root::GameError,
+    graphics::{
+        lights::LightColor,
+        mesh::Mesh,
+        vertices::{indices::TriangleGeometry, layouts::PTNVertex},
+    },
+};
 
-use crate::{game_root::GameError, graphics::lights::LightColor};
+use super::{
+    build_shader, locate_uniform, try_locate_uniform, Shader, ShaderProgram, UniformLoader,
+};
 
-use super::{Shader, ShaderProgram};
+pub struct MeshShaderPass<'a> {
+    shader: &'a mut MeshShader,
+}
+
+impl<'a> MeshShaderPass<'a> {
+    pub fn render(
+        &self,
+        model_view: &Mat4,
+        projection_model_view: &Mat4,
+        mesh: &Mesh<PTNVertex, TriangleGeometry>,
+    ) {
+        self.shader.load(self.shader.view_model_uniform, model_view);
+        self.shader.load(
+            self.shader.projection_view_model_uniform,
+            projection_model_view,
+        );
+        mesh.bind();
+        mesh.render();
+    }
+}
 
 #[derive(Clone)]
 pub struct MeshShader {
+    shader_id: u32,
     projection_view_model_uniform: i32,
     view_model_uniform: i32,
     directional_light_count_uniform: i32,
@@ -29,128 +57,70 @@ struct MaterialUniform {
     diffuse: i32,
 }
 
-impl Shader<MeshShader> for MeshShader {
-    fn build(shader_id: u32) -> Result<MeshShader, GameError> {
-        unsafe {
-            gl::UseProgram(shader_id);
-
-            let projection_view_model_uniform =
-                ShaderProgram::<Self>::get_location(shader_id, "projection_view_model\0")?;
-
-            let view_model_uniform =
-                ShaderProgram::<Self>::get_location(shader_id, "view_model\0")?;
-
-            let directional_light_count_uniform =
-                ShaderProgram::<Self>::get_location(shader_id, "directional_light_count\0")?;
-
-            let directional_lights: Result<[DirectionalLightUniform; 4], _> = (0..5)
-                .filter_map(|i| {
-                    let instance = format!("directional_lights[{}]", i);
-
-                    let direction = ShaderProgram::<Self>::get_location(
-                        shader_id,
-                        &format!("{}.direction\0", instance),
-                    )
-                    .ok()?;
-                    let ambient = ShaderProgram::<Self>::get_location(
-                        shader_id,
-                        &format!("{}.ambient\0", instance),
-                    )
-                    .ok()?;
-                    let diffuse = ShaderProgram::<Self>::get_location(
-                        shader_id,
-                        &format!("{}.diffuse\0", instance),
-                    )
-                    .ok()?;
-                    let specular = ShaderProgram::<Self>::get_location(
-                        shader_id,
-                        &format!("{}.specular\0", instance),
-                    )
-                    .ok()?;
-                    Some(DirectionalLightUniform {
-                        direction,
-                        ambient,
-                        diffuse,
-                        specular,
-                    })
-                })
-                .collect::<Vec<_>>()
-                .try_into();
-
-            let material_uniform = MaterialUniform {
-                diffuse: ShaderProgram::<Self>::get_location(
-                    shader_id,
-                    &format!("material.diffuse\0"),
-                )?,
-            };
-
-            let Ok(directional_light_uniforms) = directional_lights else {
-                return GameError::err(format!("Failed to find directional_lights in shader"));
-            };
-
-            Ok(MeshShader {
-                directional_light_uniforms,
-                material_uniform,
-                directional_light_count_uniform,
-                projection_view_model_uniform,
-                view_model_uniform,
-            })
-        }
+impl Shader for MeshShader {
+    fn shader_id(&self) -> u32 {
+        self.shader_id
     }
 }
 
-impl ShaderProgram<MeshShader> {
-    pub fn bind_diffuse(&self, diffuse: u32) {
-        unsafe {
-            gl::UseProgram(self.shader_id);
-            gl::Uniform1i(self.shader.material_uniform.diffuse, diffuse as i32);
-        }
+impl MeshShader {
+    fn build(vertex: &str, geometry: &str, fragment: &str) -> Result<MeshShader, GameError> {
+        let shader_id = build_shader(Some(vertex), None, Some(fragment))?;
+
+        let projection_view_model_uniform = locate_uniform(shader_id, "projection_view_model")
+            .ok_or(GameError::uniform("projection_view_model"))?;
+
+        let view_model_uniform = try_locate_uniform(shader_id, "view_model")?;
+
+        let directional_light_count_uniform =
+            try_locate_uniform(shader_id, "directional_light_count")?;
+
+        let directional_light_uniforms: [DirectionalLightUniform; 4] = (0..5)
+            .filter_map(|i| {
+                let instance = format!("directional_lights[{}]", i);
+
+                let direction = locate_uniform(shader_id, &format!("{}.direction", instance))?;
+                let ambient = locate_uniform(shader_id, &format!("{}.ambient", instance))?;
+                let diffuse = locate_uniform(shader_id, &format!("{}.diffuse", instance))?;
+                let specular = locate_uniform(shader_id, &format!("{}.specular", instance))?;
+
+                Some(DirectionalLightUniform {
+                    direction,
+                    ambient,
+                    diffuse,
+                    specular,
+                })
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .map_err(|_| GameError::new("Failed to find all light uniforms"))?;
+
+        let material_uniform = MaterialUniform {
+            diffuse: locate_uniform(shader_id, &format!("material.diffuse"))
+                .ok_or(GameError::uniform("material.diffuse"))?,
+        };
+
+        Ok(MeshShader {
+            shader_id,
+            directional_light_uniforms,
+            material_uniform,
+            directional_light_count_uniform,
+            projection_view_model_uniform,
+            view_model_uniform,
+        })
     }
 
-    pub fn bind_projection_view_model(&self, projection_view_model: &[f32; 16]) {
-        Self::load_mat(
-            &self,
-            projection_view_model,
-            self.shader.projection_view_model_uniform,
-        )
-    }
+    pub fn new_pass(&mut self, lights: &[(Vec3, LightColor)]) -> MeshShaderPass {
+        self.bind();
 
-    pub fn bind_view_model(&self, view_model: &[f32; 16]) {
-        Self::load_mat(&self, view_model, self.shader.view_model_uniform)
-    }
+        lights
+            .iter()
+            .enumerate()
+            .for_each(|(i, (direction, color))| {
+                self.load(self.directional_light_uniforms[i].ambient, color.ambient);
+                self.load(self.directional_light_uniforms[i].diffuse, color.diffuse);
+            });
 
-    pub fn bind_directional_light(&self, i: usize, dir: &Vec3, color: &LightColor) {
-        unsafe {
-            gl::Uniform3f(
-                self.shader.directional_light_uniforms[i].ambient,
-                color.ambient.x,
-                color.ambient.y,
-                color.ambient.z,
-            );
-            gl::Uniform3f(
-                self.shader.directional_light_uniforms[i].diffuse,
-                color.diffuse.x,
-                color.diffuse.y,
-                color.diffuse.z,
-            );
-            gl::Uniform3f(
-                self.shader.directional_light_uniforms[i].specular,
-                color.specular.x,
-                color.specular.y,
-                color.specular.z,
-            );
-            gl::Uniform3f(
-                self.shader.directional_light_uniforms[i].direction,
-                dir.x,
-                dir.y,
-                dir.z,
-            );
-        }
-    }
-
-    pub fn bind_directional_light_count(&self, count: u32) {
-        unsafe {
-            gl::Uniform1i(self.shader.directional_light_count_uniform, count as i32);
-        }
+        MeshShaderPass { shader: self }
     }
 }

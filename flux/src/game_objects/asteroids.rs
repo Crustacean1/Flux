@@ -23,14 +23,14 @@ use atlas::{
     game_root::GameError,
     graphics::{
         graphics_context::{self, GraphicsContext},
-        instanced_primitive::InstancedPrimitive,
+        instanced_mesh::InstancedMesh,
         lights::{Light, LightColor},
         material::{
             phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
             sprite_material::SpriteMaterial,
         },
+        model::Model,
         mesh::Mesh,
-        primitive::Primitive,
         vertices::{crosshair::crosshair, generator, sphere},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
@@ -51,7 +51,7 @@ pub fn asteroids(
 
     let meshes = ["spaceship3"];
 
-    let meshes: Vec<Mesh> = meshes
+    let meshes: Vec<Model> = meshes
         .iter()
         .map(|mesh| {
             return resource_manager.get(mesh).res;
@@ -157,7 +157,7 @@ fn create_hud(
 fn create_thruster(resource_manager: &mut SceneResourceManager) -> ParticleEmitter {
     let thruster_material = resource_manager.get("thruster").res;
     let (vertices, indices) = generator::quad(1.0, 1.0);
-    let instanced_mesh = InstancedPrimitive::new(&vertices, &indices, &vec![]);
+    let instanced_mesh = InstancedMesh::new(&vertices, &indices, &vec![]);
 
     let emitter_definition = ParticleEmitterDefinition {
         count: 1000,
