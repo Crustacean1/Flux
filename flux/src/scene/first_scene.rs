@@ -18,6 +18,7 @@ use atlas::{
     resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
     systems::{
+        bullet_detonator::process_bullet_events,
         bullet_renderer::BulletRenderer,
         bullet_system::update_bullets,
         collider_renderer::CollisionRenderer,
@@ -63,7 +64,7 @@ impl Scene for FirstScene {
         let fps_counter = self.create_label(Vec3::new(50.0, 50.0, 0.0));
         let physics_counter = self.create_label(Vec3::new(50.0, 100.0, 0.0));
 
-        let (mut now, mut prev, mut prev_phys) = (Instant::now(), Instant::now(), Instant::now());
+        let (mut now, mut prev_phys) = (Instant::now(), Instant::now());
 
         let mut physics_delta: u128 = 0;
 
@@ -105,7 +106,8 @@ impl Scene for FirstScene {
                     self.physical_simulation.delta(),
                 );
 
-                //CollisionSystem::resolve_collisions(&self.entity_manager);
+                CollisionSystem::resolve_collisions(&mut self.event_sender, &self.entity_manager);
+                process_bullet_events(&mut self.event_reader, &mut self.entity_manager);
                 self.physical_simulation
                     .integrate_movement(&mut self.entity_manager);
                 update_particles(&mut self.entity_manager, self.physical_simulation.delta());
@@ -263,7 +265,9 @@ impl FirstScene {
         ))
     }
 
-    fn render(&mut self, context: &mut GraphicsContext) {
+    fn render(&mut self, graphics_context: &mut GraphicsContext) {
+        let mut context = graphics_context.new_context();
+
         let camera_kit = self
             .entity_manager
             .iter()
@@ -277,20 +281,32 @@ impl FirstScene {
             .next();
 
         if let Some((camera_transform, camera, body)) = camera_kit {
-            context.depth_write(false);
-            self.skybox_renderer
-                .render(&self.entity_manager, camera, camera_transform);
-            context.depth_write(true);
+            graphics_context.depth_write(false);
+            self.skybox_renderer.render(
+                &mut context,
+                &self.entity_manager,
+                camera,
+                camera_transform,
+            );
+            graphics_context.depth_write(true);
 
             self.mesh_renderer
-                .render(&self.entity_manager, camera, camera_transform);
+                .render(&mut context, &self.entity_manager, camera, camera_transform);
 
-            context.depth_write(false);
-            self.particle_renderer
-                .render(&self.entity_manager, camera, camera_transform);
+            graphics_context.depth_write(false);
+            self.particle_renderer.render(
+                &mut context,
+                &self.entity_manager,
+                camera,
+                camera_transform,
+            );
 
-            self.bullet_renderer
-                .render_bullets(&self.entity_manager, camera, camera_transform);
+            self.bullet_renderer.render_bullets(
+                &mut context,
+                &self.entity_manager,
+                camera,
+                camera_transform,
+            );
 
             /*self.collision_renderer.render(&self.entity_manager, camera, camera_transform);
 
@@ -301,13 +317,13 @@ impl FirstScene {
                 camera_transform,
             );*/
 
-            context.depth_write(true);
+            graphics_context.depth_write(true);
 
             self.text_renderer
-                .render(&self.entity_manager, &self.ui_camera);
+                .render(&mut context, &self.entity_manager, &self.ui_camera);
 
             self.sprite_renderer
-                .render(&self.entity_manager, &self.ui_camera);
+                .render(&mut context, &self.entity_manager, &self.ui_camera);
         }
     }
 

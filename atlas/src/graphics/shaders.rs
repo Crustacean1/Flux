@@ -1,11 +1,16 @@
-use std::{ffi::CString, mem};
+use std::{
+    ffi::{CStr, CString},
+    fs, mem,
+    path::PathBuf,
+};
 
 use glad_gl::gl;
 use glam::{Mat4, Vec3};
 
-use crate::game_root::GameError;
-
-use super::context::Context;
+use crate::{
+    game_root::GameError,
+    resource_manager::{try_get_file, ResourceLoader},
+};
 
 pub mod bullet_shader;
 pub mod flat_shader;
@@ -13,16 +18,22 @@ pub mod mesh_shader;
 pub mod particle_shader;
 pub mod skybox_shader;
 pub mod text_shader;
-pub mod ui_shader;
+pub mod sprite_shader;
+
+pub trait ShaderDefinition: Sized {
+    type Shader: Shader;
+    const EXTENSION: &'static str;
+
+    fn create_shader(&self) -> Self::Shader;
+    fn build(shader_id: u32) -> Result<Self, GameError>;
+}
 
 pub trait Shader {
-    type ShaderPass<'a>;
     fn shader_id(&self) -> u32;
-    fn new_pass(&self) -> Self::ShaderPass<'a>;
 }
 
 pub trait UniformLoader<T> {
-    fn load(&mut self, uniform: i32, value: T);
+    fn load(&self, uniform: i32, value: T);
 }
 
 fn locate_uniform(program: u32, uniform: &str) -> Option<i32> {
@@ -38,8 +49,34 @@ fn try_locate_uniform(program: u32, uniform: &str) -> Result<i32, GameError> {
     locate_uniform(program, uniform).ok_or(GameError::uniform(uniform))
 }
 
+impl<T: ShaderDefinition + Clone + Default> ResourceLoader for T {
+    type Resource = T;
+
+    fn is_resource(path: &std::path::PathBuf) -> bool {
+        path.extension().map_or(false, |e| e == T::EXTENSION)
+    }
+
+    fn load_resource(entries: &[std::path::PathBuf]) -> Result<Self::Resource, GameError> {
+        let extract_filename = |filename: &PathBuf| -> Result<Option<CString>, GameError> {
+            let file = fs::read(filename)?;
+            let shader =
+                CString::new(file).map_err(|_| GameError::new("Failed to convert to C-string"))?;
+            Ok(Some(shader))
+        };
+
+        let vertex = try_get_file("vertex", entries).map_or(Ok(None), |f| extract_filename(f))?;
+        let geometry =
+            try_get_file("geometry", entries).map_or(Ok(None), |f| extract_filename(f))?;
+        let fragment =
+            try_get_file("fragment", entries).map_or(Ok(None), |f| extract_filename(f))?;
+
+        let shader_id = build_shader(vertex, geometry, fragment)?;
+        Self::Resource::build(shader_id)
+    }
+}
+
 impl<Q: Shader> UniformLoader<&Mat4> for Q {
-    fn load(&mut self, uniform: i32, value: &Mat4) {
+    fn load(&self, uniform: i32, value: &Mat4) {
         unsafe {
             gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.to_cols_array().as_ptr());
         }
@@ -47,7 +84,7 @@ impl<Q: Shader> UniformLoader<&Mat4> for Q {
 }
 
 impl<Q: Shader> UniformLoader<i32> for Q {
-    fn load(&mut self, uniform: i32, value: i32) {
+    fn load(&self, uniform: i32, value: i32) {
         unsafe {
             gl::Uniform1i(uniform, value);
         }
@@ -55,7 +92,7 @@ impl<Q: Shader> UniformLoader<i32> for Q {
 }
 
 impl<Q: Shader> UniformLoader<Vec3> for Q {
-    fn load(&mut self, uniform: i32, value: Vec3) {
+    fn load(&self, uniform: i32, value: Vec3) {
         unsafe {
             gl::Uniform3f(uniform, value.x, value.y, value.z);
         }
@@ -63,9 +100,9 @@ impl<Q: Shader> UniformLoader<Vec3> for Q {
 }
 
 pub fn build_shader(
-    vertex: Option<&str>,
-    geometry: Option<&str>,
-    fragment: Option<&str>,
+    vertex: Option<CString>,
+    geometry: Option<CString>,
+    fragment: Option<CString>,
 ) -> Result<u32, GameError> {
     let vertex = (vertex, gl::VERTEX_SHADER);
     let geometry = (geometry, gl::GEOMETRY_SHADER);
@@ -75,7 +112,7 @@ pub fn build_shader(
 
     [vertex, geometry, fragment]
         .iter()
-        .filter_map(|(shader, shader_type)| Some(compile((*shader)?, *shader_type)))
+        .filter_map(|(shader, shader_type)| Some(compile(shader.as_ref()?, *shader_type)))
         .fold(Ok(()), |compilation_result: Result<(), GameError>, x| {
             compilation_result?;
             Ok(attach(shader_program, x?))
@@ -84,7 +121,7 @@ pub fn build_shader(
     link_program(shader_program)
 }
 
-fn compile(source: &str, shader_type: u32) -> Result<u32, GameError> {
+fn compile(source: &CStr, shader_type: u32) -> Result<u32, GameError> {
     unsafe {
         let shader_id = match gl::CreateShader(shader_type) {
             0 => {

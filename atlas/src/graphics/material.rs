@@ -14,7 +14,13 @@ pub trait Material {
     fn bind(&self);
 }
 
-fn load_named_texture(name: &str, textures: &Vec<PathBuf>) -> Result<Texture, GameError> {
+pub struct EmptyMaterial;
+
+impl Material for EmptyMaterial {
+    fn bind(&self) {}
+}
+
+fn load_named_texture(name: &str, textures: &[PathBuf]) -> Result<Texture, GameError> {
     if let Some(tex) = textures.iter().find(|t| {
         t.file_stem().map_or(false, |texture_name| {
             texture_name

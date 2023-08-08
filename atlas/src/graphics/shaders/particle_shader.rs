@@ -1,17 +1,8 @@
 use glam::Mat4;
 
-use crate::graphics::{
-    instanced_mesh::InstancedMesh,
-    vertices::{
-        indices::TriangleGeometry,
-        layouts::{BufferElement, P2TVertex, PTVertex},
-    },
-};
+use crate::game_root::GameError;
 
-use super::{
-    build_shader, text_shader::TextShaderPass, try_locate_uniform, Shader, ShaderProgram,
-    UniformLoader,
-};
+use super::{try_locate_uniform, Shader, ShaderDefinition, UniformLoader};
 
 #[repr(C)]
 #[derive(Clone, Default, Debug)]
@@ -21,47 +12,58 @@ pub struct ParticleInstance {
     pub transform: [f32; 4],
 }
 
-pub struct ParticleShaderPass<'a> {
-    shader: &'a mut ParticleShader,
+#[derive(Clone, Copy, Default)]
+struct Uniform {
+    projection: i32,
+    view: i32,
 }
 
-impl<'a> ParticleShaderPass<'a> {
-    pub fn render(&self, mesh: &InstancedMesh<ParticleInstance, P2TVertex, TriangleGeometry>) {
-        mesh.render();
+#[derive(Clone, Default)]
+pub struct ParticleShaderDefinition {
+    shader_id: u32,
+    uniform: Uniform,
+}
+
+impl ShaderDefinition for ParticleShaderDefinition {
+    fn create_shader(&self) -> ParticleShader {
+        ParticleShader {
+            shader_id: self.shader_id,
+            uniform: self.uniform,
+        }
+    }
+
+    type Shader = ParticleShader;
+
+    const EXTENSION: &'static str = "particle_shader";
+
+    fn build(shader_id: u32) -> Result<Self, GameError> {
+        let view = try_locate_uniform(shader_id, "view")?;
+        let projection = try_locate_uniform(shader_id, "projection")?;
+
+        let uniform = Uniform { view, projection };
+
+        Ok(Self { shader_id, uniform })
     }
 }
 
 #[derive(Clone)]
 pub struct ParticleShader {
     shader_id: u32,
-    projection_uniform: i32,
-    view_uniform: i32,
+    uniform: Uniform,
+}
+
+impl ParticleShader {
+    pub fn projection(&self, mat: &Mat4) {
+        self.load(self.uniform.projection, mat);
+    }
+
+    pub fn view(&self, mat: &Mat4) {
+        self.load(self.uniform.view, mat);
+    }
 }
 
 impl Shader for ParticleShader {
     fn shader_id(&self) -> u32 {
         self.shader_id
-    }
-}
-
-impl ParticleShader {
-    fn build(vertex: &str, fragment: &str) -> Result<ParticleShader, crate::game_root::GameError> {
-        let shader_id = build_shader(Some(vertex), None, Some(fragment))?;
-
-        let view_uniform = try_locate_uniform(shader_id, "view")?;
-        let projection_uniform = try_locate_uniform(shader_id, "projection")?;
-
-        Ok(Self {
-            shader_id,
-            projection_uniform,
-            view_uniform,
-        })
-    }
-
-    pub fn new_pass(&mut self, projection: &Mat4, view: &Mat4) -> ParticleShaderPass {
-        self.bind();
-        self.load(self.projection_uniform, projection);
-        self.load(self.view_uniform, view);
-        ParticleShaderPass { shader: self }
     }
 }

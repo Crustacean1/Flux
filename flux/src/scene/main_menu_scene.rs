@@ -11,7 +11,7 @@ use atlas::{
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::{ui_shader::SpriteShader, ShaderProgram},
+        shaders::sprite_shader::{SpriteShader, SpriteShaderDefinition},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
@@ -34,6 +34,8 @@ pub struct MainMenuScene {
 impl Scene for MainMenuScene {
     fn run(&mut self, graphics_context: &mut GraphicsContext) -> SceneEvent {
         let (mut now, mut prev) = (Instant::now(), Instant::now());
+        let mut context = graphics_context.new_context();
+
         loop {
             prev = now;
             now = Instant::now();
@@ -48,8 +50,11 @@ impl Scene for MainMenuScene {
                 &mut self.event_sender,
             );
 
-            self.shape_rendering_system
-                .render(&mut self.entity_manager, &self.camera);
+            self.shape_rendering_system.render(
+                &mut context,
+                &mut self.entity_manager,
+                &self.camera,
+            );
 
             if let Some(scene_action) = self.get_scene_action() {
                 return scene_action;
@@ -88,7 +93,7 @@ impl MainMenuScene {
         let mut entity_manager = EntityManager::new();
         let mut resource_manager = SceneResourceManager::build("main")?;
 
-        let ui_shader: ShaderProgram<SpriteShader> = resource_manager.get("basic_ui").res;
+        let ui_shader: SpriteShaderDefinition = resource_manager.get("basic_ui").res;
         let shape_rendering_system = SpriteRendererSystem::new(ui_shader);
 
         create_main_menu(

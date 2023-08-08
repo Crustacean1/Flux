@@ -4,6 +4,7 @@ use super::transform::Transform;
 
 pub struct Collider {
     pub radius: f32,
+    pub callback: Option<Box<dyn Fn(Vec3)>>,
 }
 
 pub fn collide(

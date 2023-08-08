@@ -4,14 +4,13 @@ use crate::{
     components::{
         camera::Camera, collider::Collider, physical_body::PhysicalBody, transform::Transform,
     },
-    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     graphics::{
         instanced_mesh::InstancedMesh,
-        mesh::Mesh,
-        shaders::{flat_shader::FlatShader, ShaderProgram},
+        shaders::flat_shader::FlatShader,
         vertices::{
             indices::TriangleGeometry,
-            layouts::{Attribute, BufferElement, PTNVertex, PTVertex},
+            layouts::{Attribute, BufferElement, PTNVertex},
             sphere::sphere,
         },
     },
@@ -57,6 +56,7 @@ impl CollisionRenderer {
         camera_transform: &Transform,
     ) {
         self.instances.clear();
+
         entity_manager.get_view().for_each(
             |(transform, collider, _): (&Transform, &Collider, &PhysicalBody)| {
                 self.instances.push(CollisionInstance {
@@ -70,11 +70,5 @@ impl CollisionRenderer {
                 })
             },
         );
-
-        self.shader.bind();
-        let (projection, view) = camera.projection_view(camera_transform);
-        self.shader.bind_projection_view(&(projection * view));
-        self.sphere.load_instances(&self.instances);
-        self.sphere.render();
     }
 }

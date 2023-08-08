@@ -1,11 +1,10 @@
-use glam::{Mat4, Vec3};
-
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::{hud::HudEntity, ui_label::UiLabel},
     graphics::{
+        context::{Context, MaterialContext},
         mesh::Mesh,
-        shaders::{text_shader::TextShader, ShaderProgram},
+        shaders::text_shader::{TextShader, TextShaderDefinition},
         vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
     resource_manager::font::Font,
@@ -14,11 +13,11 @@ use crate::{
 use super::{camera::Camera, transform::Transform};
 
 pub struct TextRendererSystem {
-    shader: TextShader,
+    shader: TextShaderDefinition,
 }
 
 impl TextRendererSystem {
-    pub fn new(shader: TextShader) -> Self {
+    pub fn new(shader: TextShaderDefinition) -> Self {
         TextRendererSystem { shader }
     }
 }
@@ -78,19 +77,23 @@ impl<'a> ComponentIteratorGenerator<'a, (Transform, &'a TextRenderer)> for Entit
 }
 
 impl TextRendererSystem {
-    pub fn render(&mut self, entity_manager: &EntityManager, camera: &Camera) {
-        self.shader.bind();
-
-        entity_manager.get_view().for_each(
-            |(transform, text_renderer): (Transform, &TextRenderer)| {
-                let projection_view_model = camera.projection() * transform.model();
-
-                text_renderer.font.bind();
-
-                let pass = self.shader.new_pass();
-                pass.render(text_renderer.primitive(), &projection_view_model, 0);
-                text_renderer.primitive().render();
-            },
-        );
+    pub fn render(
+        &mut self,
+        context: &mut Context,
+        entity_manager: &EntityManager,
+        camera: &Camera,
+    ) {
+        context.use_shader(&self.shader, |context| {
+            entity_manager.get_view().for_each(
+                |(transform, text_renderer): (Transform, &TextRenderer)| {
+                    let lambda = |context: &mut MaterialContext<TextShader, Font>| {
+                        let projection_model = camera.projection() * transform.model();
+                        context.shader.projection_model(&projection_model);
+                        text_renderer.primitive().render()
+                    };
+                    context.use_material(&text_renderer.font, lambda);
+                },
+            );
+        })
     }
 }

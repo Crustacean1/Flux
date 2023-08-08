@@ -3,8 +3,10 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::bullet::BulletEntity,
     graphics::{
+        context::Context,
         instanced_mesh::InstancedMesh,
-        shaders::{bullet_shader::BulletShader, ShaderProgram},
+        material::EmptyMaterial,
+        shaders::bullet_shader::BulletShaderDefinition,
         vertices::{
             bullet::bullet,
             indices::PointGeometry,
@@ -38,13 +40,13 @@ impl BufferElement for BulletInstance {
 }
 
 pub struct BulletRenderer {
-    shader: BulletShader,
+    shader: BulletShaderDefinition,
     meshes: InstancedMesh<BulletInstance, PVertex, PointGeometry>,
     bullet_instances: Vec<BulletInstance>,
 }
 
 impl BulletRenderer {
-    pub fn new(shader: BulletShader) -> Self {
+    pub fn new(shader: BulletShaderDefinition) -> Self {
         let (vertices, indices) = bullet();
 
         BulletRenderer {
@@ -56,18 +58,24 @@ impl BulletRenderer {
 
     pub fn render_bullets(
         &mut self,
+        context: &mut Context,
         entity_manager: &EntityManager,
         camera: &Camera,
         camera_transform: &Transform,
     ) {
         self.reload_instances(entity_manager);
         self.meshes.load_instances(&self.bullet_instances);
+        let material = EmptyMaterial {};
 
-        let (projection, view) = camera.projection_view(camera_transform);
-        let pass = self.shader.new_pass(&projection, &view);
+        context.use_shader(&self.shader, |context| {
+            let (projection, view) = camera.projection_view(camera_transform);
+            context.shader.view(&view);
+            context.shader.projection(&projection);
 
-        pass.render(&self.meshes);
-        self.meshes.render();
+            context.use_material(&material, |_context| {
+                self.meshes.render();
+            })
+        });
     }
 
     fn reload_instances(&mut self, entity_manager: &EntityManager) {

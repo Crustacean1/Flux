@@ -46,7 +46,7 @@ impl PlayerController {
     pub fn new() -> Self {
         Self {
             buttons: vec![],
-            thruster_force: 100.,
+            thruster_force: 500.,
             mouse_speed: 0.001,
             bullet_cooldown: 0,
         }
@@ -106,18 +106,20 @@ impl PlayerController {
             'W' => force += Vec4::new(0.0, 0.0, -self.thruster_force, 0.0),
             '1' => {
                 if self.bullet_cooldown == 0 {
-                    self.bullet_cooldown = 1_00_000_000;
+                    self.bullet_cooldown = 2_00_000_000;
 
                     let mut transform1 = *transform;
-                    transform1.position += transform.to_global(Vec4::new(-1.5, -0.4, -2.5, 0.0)).xyz();
+                    transform1.position +=
+                        transform.to_global(Vec4::new(-1.5, -0.4, -2.5, 0.0)).xyz();
                     let mut transform2 = *transform;
-                    transform2.position += transform.to_global(Vec4::new(1.5, -0.4, -2.5, 0.0)).xyz();
+                    transform2.position +=
+                        transform.to_global(Vec4::new(1.5, -0.4, -2.5, 0.0)).xyz();
 
                     let velocity = physical_body.velocity()
-                        + transform.to_global(Vec4::new(0.0, 0.0, -25.0, 0.0)).xyz();
+                        + transform.to_global(Vec4::new(0.0, 0.0, -45.0, 0.0)).xyz();
 
-                    let mut body1 = PhysicalBody::new(1.0, 1.0);
-                    let mut body2 = PhysicalBody::new(1.0, 1.0);
+                    let mut body1 = PhysicalBody::new(1.0, 1.0, 1.0);
+                    let mut body2 = PhysicalBody::new(1.0, 1.0, 1.0);
 
                     body1.momentum = velocity;
                     body2.momentum = velocity;
@@ -125,7 +127,11 @@ impl PlayerController {
                     event_sender.write(GameEvent::ShootPlasmaBullet(
                         transform1,
                         BulletEntity {
-                            collider: Collider { radius: 0.5 },
+                            collider: Collider {
+                                radius: 0.5,
+                                callback: Some(Box::new(|pos| println!("Bullet on bullet action"))),
+                            },
+                            explosion_effect: None,
                             body: body1,
                             lifetime: 2.0,
                         },
@@ -133,7 +139,11 @@ impl PlayerController {
                     event_sender.write(GameEvent::ShootPlasmaBullet(
                         transform2,
                         BulletEntity {
-                            collider: Collider { radius: 0.5 },
+                            collider: Collider {
+                                radius: 0.5,
+                                callback: Some(Box::new(|pos| println!("Bullet on bullet action"))),
+                            },
+                            explosion_effect: None,
                             body: body2,
                             lifetime: 2.0,
                         },

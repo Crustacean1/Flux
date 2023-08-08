@@ -1,81 +1,49 @@
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 
 use crate::{
     game_root::GameError,
     graphics::{
-        lights::LightColor,
-        mesh::Mesh,
-        vertices::{indices::TriangleGeometry, layouts::PTNVertex},
+        lights::LightColor, material::phong_material::PhongMaterial, shaders::UniformLoader,
     },
 };
 
-use super::{
-    build_shader, locate_uniform, try_locate_uniform, Shader, ShaderProgram, UniformLoader,
-};
+use super::{locate_uniform, try_locate_uniform, Shader, ShaderDefinition};
 
-pub struct MeshShaderPass<'a> {
-    shader: &'a mut MeshShader,
+#[derive(Clone, Copy, Default)]
+struct Uniform {
+    projection_view_model: i32,
+    view_model: i32,
+    directional_light_count: i32,
+    directional_lights: [DirectionalLightUniform; 4],
+    material: i32,
 }
 
-impl<'a> MeshShaderPass<'a> {
-    pub fn render(
-        &self,
-        model_view: &Mat4,
-        projection_model_view: &Mat4,
-        mesh: &Mesh<PTNVertex, TriangleGeometry>,
-    ) {
-        self.shader.load(self.shader.view_model_uniform, model_view);
-        self.shader.load(
-            self.shader.projection_view_model_uniform,
-            projection_model_view,
-        );
-        mesh.bind();
-        mesh.render();
-    }
-}
-
-#[derive(Clone)]
-pub struct MeshShader {
+#[derive(Clone, Default)]
+pub struct MeshShaderDefinition {
     shader_id: u32,
-    projection_view_model_uniform: i32,
-    view_model_uniform: i32,
-    directional_light_count_uniform: i32,
-    directional_light_uniforms: [DirectionalLightUniform; 4],
-    material_uniform: MaterialUniform,
+    uniform: Uniform,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct DirectionalLightUniform {
-    direction: i32,
-    ambient: i32,
-    diffuse: i32,
-    specular: i32,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct MaterialUniform {
-    diffuse: i32,
-}
-
-impl Shader for MeshShader {
-    fn shader_id(&self) -> u32 {
-        self.shader_id
+impl ShaderDefinition for MeshShaderDefinition {
+    fn create_shader(&self) -> MeshShader {
+        MeshShader {
+            shader_id: self.shader_id,
+            uniform: self.uniform,
+        }
     }
-}
 
-impl MeshShader {
-    fn build(vertex: &str, geometry: &str, fragment: &str) -> Result<MeshShader, GameError> {
-        let shader_id = build_shader(Some(vertex), None, Some(fragment))?;
+    type Shader = MeshShader;
 
-        let projection_view_model_uniform = locate_uniform(shader_id, "projection_view_model")
-            .ok_or(GameError::uniform("projection_view_model"))?;
+    const EXTENSION: &'static str = "mesh_shader";
 
-        let view_model_uniform = try_locate_uniform(shader_id, "view_model")?;
+    fn build(shader_id: u32) -> Result<Self, GameError> {
+        let projection_view_model = try_locate_uniform(shader_id, "projection_view_model")?;
 
-        let directional_light_count_uniform =
-            try_locate_uniform(shader_id, "directional_light_count")?;
+        let view_model = try_locate_uniform(shader_id, "view_model")?;
 
-        let directional_light_uniforms: [DirectionalLightUniform; 4] = (0..5)
+        let directional_light_count = try_locate_uniform(shader_id, "directional_light_count")?;
+
+        let directional_lights: [DirectionalLightUniform; 4] = (0..5)
             .filter_map(|i| {
                 let instance = format!("directional_lights[{}]", i);
 
@@ -95,32 +63,65 @@ impl MeshShader {
             .try_into()
             .map_err(|_| GameError::new("Failed to find all light uniforms"))?;
 
-        let material_uniform = MaterialUniform {
-            diffuse: locate_uniform(shader_id, &format!("material.diffuse"))
-                .ok_or(GameError::uniform("material.diffuse"))?,
+        let material = try_locate_uniform(shader_id, &format!("material.diffuse"))?;
+
+        let uniform = Uniform {
+            projection_view_model,
+            view_model,
+            directional_light_count,
+            directional_lights,
+            material,
         };
 
-        Ok(MeshShader {
-            shader_id,
-            directional_light_uniforms,
-            material_uniform,
-            directional_light_count_uniform,
-            projection_view_model_uniform,
-            view_model_uniform,
-        })
+        Ok(MeshShaderDefinition { shader_id, uniform })
+    }
+}
+
+#[derive(Clone)]
+pub struct MeshShader {
+    shader_id: u32,
+    uniform: Uniform,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct DirectionalLightUniform {
+    direction: i32,
+    ambient: i32,
+    diffuse: i32,
+    specular: i32,
+}
+
+impl Shader for MeshShader {
+    fn shader_id(&self) -> u32 {
+        self.shader_id
+    }
+}
+
+impl MeshShader {
+    pub fn projection_view_model(&self, mat: &Mat4) {
+        self.load(self.uniform.projection_view_model, mat);
     }
 
-    pub fn new_pass(&mut self, lights: &[(Vec3, LightColor)]) -> MeshShaderPass {
-        self.bind();
-
-        lights
-            .iter()
-            .enumerate()
-            .for_each(|(i, (direction, color))| {
-                self.load(self.directional_light_uniforms[i].ambient, color.ambient);
-                self.load(self.directional_light_uniforms[i].diffuse, color.diffuse);
-            });
-
-        MeshShaderPass { shader: self }
+    pub fn view_model(&self, mat: &Mat4) {
+        self.load(self.uniform.view_model, mat);
     }
+
+    pub fn directional_lights(&self, view: &Mat4, lights: &[(Vec3, LightColor)]) {
+        lights.iter().enumerate().for_each(|(i, (dir, light))| {
+            self.load(
+                self.uniform.directional_lights[i].direction,
+                (*view * Vec4::from((*dir, 0.0))).xyz().normalize(),
+            );
+            self.load(
+                self.uniform.directional_lights[i].ambient,
+                Vec3::new(0.0, 0.0, 0.0),
+            );
+            self.load(self.uniform.directional_lights[i].diffuse, light.diffuse);
+            self.load(self.uniform.directional_lights[i].specular, light.specular);
+        });
+
+        self.load(self.uniform.directional_light_count, 1);
+    }
+
+    pub fn material(&self, material: &PhongMaterial) {}
 }

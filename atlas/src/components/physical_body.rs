@@ -8,6 +8,7 @@ pub enum PhysicalInteraction {
 pub struct PhysicalBody {
     pub mass: f32,
     pub momentum: Vec3,
+    pub dampening_factor: f32,
     resultant_force: Vec3,
 
     pub angular_inertia: f32,
@@ -16,10 +17,11 @@ pub struct PhysicalBody {
 }
 
 impl PhysicalBody {
-    pub fn new(mass: f32, angular_inertia: f32) -> Self {
+    pub fn new(mass: f32, angular_inertia: f32, dampening: f32) -> Self {
         Self {
             mass,
             angular_inertia,
+            dampening_factor: dampening,
             momentum: Vec3::ZERO,
             resultant_force: Vec3::ZERO,
             angular_momentum: Vec3::ZERO,
@@ -40,13 +42,17 @@ impl PhysicalBody {
         self.angular_momentum / self.angular_inertia
     }
 
-    pub fn resultant_force(&self) -> Vec3{
+    pub fn resultant_force(&self) -> Vec3 {
         self.resultant_force
     }
 
     pub fn update<'a>(&mut self, delta: f32) {
         self.momentum += self.resultant_force * delta;
         self.angular_momentum += self.resultant_ang_force * delta;
+
+        // Dampening
+        self.momentum *= self.dampening_factor;
+
         self.resultant_force = Vec3::ZERO;
         self.resultant_ang_force = Vec3::ZERO;
     }

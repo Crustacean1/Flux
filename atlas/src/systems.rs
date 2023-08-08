@@ -9,3 +9,4 @@ pub mod hud_refresher;
 pub mod renderer;
 pub mod collider_renderer;
 pub mod trail_renderer;
+pub mod bullet_detonator;

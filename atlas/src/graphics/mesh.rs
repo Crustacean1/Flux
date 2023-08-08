@@ -1,17 +1,15 @@
-use core::ffi;
-use std::{mem, ops::Range, ptr};
+use std::{fs::File, io::BufReader, mem, ptr};
 
 use glad_gl::gl;
+use glam::{Mat4, Vec4};
+use gltf::{iter::Buffers, Gltf};
 
 use crate::{game_root::GameError, resource_manager::ResourceLoader};
 
-use super::{
-    context::GenericMesh,
-    vertices::{
-        buffer::{Buffer, BufferTarget},
-        indices::{IndexGeometry, TriangleGeometry},
-        layouts::{Attribute, BufferElement, PTNVertex},
-    },
+use super::vertices::{
+    buffer::{Buffer, BufferTarget},
+    indices::{IndexGeometry, TriangleGeometry},
+    layouts::{Attribute, BufferElement, PTNVertex},
 };
 
 #[derive(Clone)]
@@ -108,26 +106,8 @@ impl<Vertex: BufferElement, Index: IndexGeometry> Mesh<Vertex, Index> {
     }
 }
 
-impl<Vertex: BufferElement, Index: IndexGeometry> GenericMesh for Mesh<Vertex, Index> {
-    fn vao(&self) -> u32 {
-        self.vao
-    }
-}
-
-impl ResourceLoader for Mesh<PTNVertex, TriangleGeometry> {
-    type Resource = Mesh<PTNVertex, TriangleGeometry>;
-    fn is_resource(path: &std::path::PathBuf) -> bool {
-        path.extension().map_or(false, |path| path == "mesh")
-    }
-
-    fn load_resource(contents: &[std::path::PathBuf]) -> Result<Self::Resource, GameError> {
-        let file = contents
-            .iter()
-            .find(|entry| entry.is_file() && entry.extension().map_or(false, |ext| ext == "glb"))
-            .ok_or(GameError::new(&format!(
-                "No file with matching .glb extension found",
-            )))?;
-
-        Ok(Mesh::new(&vec![], &vec![]))
+impl<V: BufferElement, I: IndexGeometry> Default for Mesh<V, I> {
+    fn default() -> Self {
+        Self::new(&vec![], &vec![])
     }
 }

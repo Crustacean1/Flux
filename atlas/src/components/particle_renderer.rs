@@ -1,16 +1,13 @@
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
-    game_entities::{enemy_ship::EnemyShip, player_ship::PlayerShip},
-    graphics::{
-        material::Material,
-        shaders::{particle_shader::ParticleShader, ShaderProgram},
-    },
+    game_entities::{bullet::BulletEntity, enemy_ship::EnemyShip, player_ship::PlayerShip},
+    graphics::{context::Context, shaders::particle_shader::ParticleShaderDefinition},
 };
 
 use super::{camera::Camera, particle_emitter::ParticleEmitter, transform::Transform};
 
 pub struct ParticleRenderer {
-    shader: ParticleShader,
+    shader: ParticleShaderDefinition,
 }
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ParticleEmitter)> for EntityManager {
@@ -21,29 +18,40 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ParticleEmitter)> fo
         let enemies = self
             .iter::<EnemyShip>()
             .map(|enemy| (&enemy.transform, &enemy.entity.thruster));
-        Box::new(players.chain(enemies))
+        let bullets = self.iter::<BulletEntity>().filter_map(|bullet| {
+            Some((&bullet.transform, bullet.entity.explosion_effect.as_ref()?))
+        });
+
+        Box::new(players.chain(enemies).chain(bullets))
     }
 }
 
 impl ParticleRenderer {
-    pub fn new(shader: ParticleShader) -> Self {
+    pub fn new(shader: ParticleShaderDefinition) -> Self {
         Self { shader }
     }
 
     pub fn render(
         &self,
+        context: &mut Context,
         entity_manager: &EntityManager,
         camera: &Camera,
         camera_transform: &Transform,
     ) {
-        let (projection, view) = camera.projection_view(camera_transform);
-        let pass = self.shader.new_pass(&projection, &view);
+        let particles = entity_manager.get_view();
 
-        entity_manager.get_view().for_each(
-            |(transform, particle_emitter): (&Transform, &ParticleEmitter)| {
-                particle_emitter.material.bind();
-                pass.render(&particle_emitter.mesh);
-            },
-        );
+        context.use_shader(&self.shader, |context| {
+            let (projection, view) = camera.projection_view(camera_transform);
+            context.shader.projection(&projection);
+            context.shader.view(&view);
+
+            particles.for_each(
+                |(_transform, particle_emitter): (&Transform, &ParticleEmitter)| {
+                    context.use_material(&particle_emitter.material, |_context| {
+                        particle_emitter.mesh.render();
+                    });
+                },
+            );
+        });
     }
 }

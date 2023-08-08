@@ -1,64 +1,56 @@
 use std::{
     fs::{self, File},
     io::BufReader,
-    path::PathBuf,
 };
 
 use glam::{Mat4, Vec4};
-use gltf::{
-    iter::{Buffers, Materials},
-    Gltf,
+use gltf::{iter::Buffers, Gltf};
+
+use crate::{
+    game_root::GameError,
+    graphics::{
+        material::phong_material::PhongMaterial,
+        mesh::Mesh,
+        model::Model,
+        vertices::{indices::TriangleGeometry, layouts::PTNVertex},
+    },
 };
 
-use crate::graphics::{
-    material::phong_material::PhongMaterial,
-    model::Model,
-    mesh::Mesh,
-    vertices::{indices::TriangleGeometry, layouts::PTNVertex},
-};
+use super::ResourceLoader;
 
-use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
+impl ResourceLoader for Model {
+    type Resource = Model;
 
-#[derive(Clone)]
-struct MeshNode<'a> {
-    children: Vec<&'a MeshNode<'a>>,
-}
+    fn is_resource(path: &std::path::PathBuf) -> bool {
+        path.extension().map_or(false, |path| path == "mesh")
+    }
 
-impl<'a> MeshNode<'a> {
-    pub fn new() -> Self {
-        MeshNode { children: vec![] }
+    fn load_resource(contents: &[std::path::PathBuf]) -> Result<Self::Resource, GameError> {
+        let file = contents.iter().find(|entry| {
+            entry.is_file()
+                && entry
+                    .extension()
+                    .map_or(false, |ext| ext == "glb" || ext == "gltf")
+        });
+        let file = file.ok_or(GameError::new(&format!(
+            "No file with matching extension found (.glb | .gltf)",
+        )))?;
+
+        let mesh_file = File::open(file)?;
+        let reader = BufReader::new(mesh_file);
+
+        let gltf = Gltf::from_reader(reader)
+            .map_err(|_| GameError::new(&format!("Failed to load '{:?}'", file)))?;
+        Ok(read_mesh(&gltf))
     }
 }
 
-pub fn load_mesh(res_id: &str, dir: &PathBuf, res_man: &mut SceneResourceManager) {
-    if let Ok(mut files) = fs::read_dir(dir) {
-        if let Some(Ok(mesh_filename)) = files.find(|file_entry| {
-            file_entry.as_ref().map_or(false, |file| {
-                file.path().extension().map_or(false, |extension| {
-                    extension
-                        .to_str()
-                        .map_or(false, |extension| extension == "glb" || extension == "gltf")
-                })
-            })
-        }) {
-            if let Ok(mesh_file) = File::open(mesh_filename.path()) {
-                let reader = BufReader::new(mesh_file);
-                if let Ok(gltf) = Gltf::from_reader(reader) {
-                    res_man.register(res_id, read_mesh(&gltf, dir));
-                } else {
-                    println!("Mesh failure occured ");
-                }
-            }
-        }
-    }
-}
-
-fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Model {
+fn read_mesh(gltf: &Gltf) -> Model {
     let buffers = gltf.buffers();
     let empty = vec![];
     let blob = gltf.blob.as_ref().unwrap_or(&empty);
     let buffers = load_buffers(buffers, blob);
-    let materials = load_materials(gltf.materials(), &buffers, root);
+    //let materials = load_materials(gltf.materials(), &buffers, root);
 
     let primitives: Vec<_> = gltf
         .nodes()
@@ -101,12 +93,7 @@ fn read_mesh(gltf: &Gltf, root: &PathBuf) -> Model {
                             .filter_map(|chunk| Some(TriangleGeometry(chunk.try_into().ok()?)))
                             .collect();
 
-                        let material = if let Some(material) = primitive.material().index() {
-                            materials[material].clone()
-                        } else {
-                            PhongMaterial::default()
-                        };
-
+                        let material = PhongMaterial::default();
                         Some((material, Mesh::new(&vertices, &indices)))
                     })
                     .collect(),
@@ -124,14 +111,6 @@ fn load_buffers(buffers: Buffers, blob: &[u8]) -> Vec<Vec<u8>> {
             gltf::buffer::Source::Uri(uri) => buffer_from_file(uri).unwrap(),
         })
         .collect()
-}
-
-fn load_materials(
-    materials: Materials,
-    _buffers: &[Vec<u8>],
-    _root: &PathBuf,
-) -> Vec<PhongMaterial> {
-    materials.map(|_| PhongMaterial::default()).collect()
 }
 
 fn buffer_from_file(uri: &str) -> Option<Vec<u8>> {

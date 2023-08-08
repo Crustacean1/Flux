@@ -2,9 +2,10 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::{hud::HudEntity, sprite::Sprite},
     graphics::{
+        context::Context,
         material::{sprite_material::SpriteMaterial, Material},
         mesh::Mesh,
-        shaders::{ui_shader::SpriteShader, ShaderProgram},
+        shaders::sprite_shader::{SpriteShader, SpriteShaderDefinition},
         vertices::{crosshair, generator, indices::TriangleGeometry, layouts::P2TVertex},
     },
 };
@@ -33,11 +34,11 @@ impl SpriteRenderer {
 }
 
 pub struct SpriteRendererSystem {
-    shader: SpriteShader,
+    shader: SpriteShaderDefinition,
 }
 
 impl SpriteRendererSystem {
-    pub fn new(shader: SpriteShader) -> Self {
+    pub fn new(shader: SpriteShaderDefinition) -> Self {
         SpriteRendererSystem { shader }
     }
 }
@@ -56,16 +57,19 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a SpriteRenderer)> for
 }
 
 impl SpriteRendererSystem {
-    pub fn render(&self, entity_manager: &EntityManager, camera: &Camera) {
+    pub fn render(&self, context: &mut Context, entity_manager: &EntityManager, camera: &Camera) {
         let projection = camera.projection();
-        self.shader.bind();
-        let pass = self.shader.new_pass();
-        entity_manager
-            .get_view()
-            .for_each(|(transform, shape): (&Transform, &SpriteRenderer)| {
-                shape.material.bind();
-                let mvp = projection * transform.model();
-                pass.render(shape.quad, &mvp)
+        let sprites = entity_manager.get_view();
+
+        context.use_shader(&self.shader, |context| {
+            sprites.for_each(|(transform, shape): (&Transform, &SpriteRenderer)| {
+                context.use_material(&shape.material, |context| {
+                    let mvp = projection * transform.model();
+                    context.shader.projection_view(&mvp);
+                    context.shader.sprite(0);
+                    shape.quad.render();
+                });
             });
+        });
     }
 }

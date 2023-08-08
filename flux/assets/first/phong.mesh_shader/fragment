@@ -38,7 +38,7 @@ vec3 cast_light(Material material, DirectionalLight light){
     vec3 camera_dir = -normalize(vPos);
     specular *= pow(max(dot(camera_dir, reflection), 0), 32);
 
-    return ambient + diffuse + specular * 0.001;
+    return ambient + diffuse + specular;
 }
 
 uniform Material material;

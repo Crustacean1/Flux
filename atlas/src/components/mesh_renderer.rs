@@ -1,4 +1,4 @@
-use glam::{Vec3, Vec4};
+use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -7,10 +7,11 @@ use crate::{
         starlight::Starlight,
     },
     graphics::{
+        context::Context,
         lights::{Light, LightColor},
-        material::{phong_material::PhongMaterial, Material},
+        material::phong_material::PhongMaterial,
         model::Model,
-        shaders::{mesh_shader::MeshShader, ShaderProgram},
+        shaders::mesh_shader::MeshShaderDefinition,
     },
 };
 
@@ -22,7 +23,7 @@ pub struct MeshRenderer {
 }
 
 pub struct MeshRendererSystem {
-    shader: MeshShader,
+    shader: MeshShaderDefinition,
 }
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Model)> for EntityManager {
@@ -52,70 +53,48 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Light)> for EntityMa
 }
 
 impl MeshRendererSystem {
-    pub fn new(shader: MeshShader) -> Self {
+    pub fn new(shader: MeshShaderDefinition) -> Self {
         MeshRendererSystem { shader }
     }
 
     pub fn render(
         &self,
+        context: &mut Context,
         entity_manager: &EntityManager,
         camera: &Camera,
         camera_transform: &Transform,
-    ) -> Option<()> {
+    ) {
         let (projection, view) = camera.projection_view(&camera_transform);
 
-        let lights = Self::get_lights(entity_manager);
-        let pass = self.shader.new_pass(&lights);
+        let lights = Self::get_lights(entity_manager, view);
 
-        entity_manager
-            .get_view()
-            .for_each(|(transform, model): (&Transform, &Model)| {
-                let view_model = view * transform.model();
-                let projection_view_model = projection * view * transform.model();
+        context.use_shader(&self.shader, |context| {
+            context.shader.directional_lights(&view, &lights);
 
-                model.meshes.iter().for_each(|(material, mesh)| {
-                    material.bind();
-                    pass.render(&view_model, &projection_view_model, mesh);
+            entity_manager
+                .get_view()
+                .for_each(|(transform, model): (&Transform, &Model)| {
+                    let view_model = view * transform.model();
+                    let projection_view_model = projection * view_model;
+                    context.shader.projection_view_model(&projection_view_model);
+                    context.shader.view_model(&view_model);
+
+                    model.meshes.iter().for_each(|(material, mesh)| {
+                        context.use_material(material, |_| {
+                            mesh.render();
+                        });
+                    });
                 });
-            });
-        Some(())
+        })
     }
 
-    fn get_lights(entity_manager: &EntityManager) -> Vec<(Vec3, LightColor)> {
+    fn get_lights(entity_manager: &EntityManager, view: Mat4) -> Vec<(Vec3, LightColor)> {
         entity_manager
             .get_view()
-            .map(|(transform, &light): (&Transform, &Light)| match light {
+            .map(|(_transform, &light): (&Transform, &Light)| match light {
                 Light::PointLight(_) => todo!(),
                 Light::DirectionalLight(direction, color) => (direction, color),
             })
             .collect()
     }
-
-    /*fn setup_lights(
-        &self,
-        entity_manager: &EntityManager,
-        camera: &Camera,
-        camera_transform: &Transform,
-    ) {
-        let (_, view) = camera.projection_view(camera_transform);
-        let mut directional_lights = 0;
-
-        let pass = self.shader.new_pass(self.)
-
-        entity_manager.get_view().enumerate().for_each(
-            |(i, (transform, light)): (_, (&Transform, &Light))| match light {
-                Light::PointLight(light_color) => {
-                    self.shader
-                        .bind_directional_light(i, &transform.position, light_color);
-                }
-                Light::DirectionalLight(dir, light_color) => {
-                    let dir = view * Vec4::new(dir.x, dir.y, dir.z, 0.0);
-                    let dir = Vec3::new(dir.x, dir.y, dir.z);
-                    self.shader.bind_directional_light(i, &dir, light_color);
-                    directional_lights += 1;
-                }
-            },
-        );
-        self.shader.bind_directional_light_count(directional_lights);
-    }*/
 }

@@ -2,9 +2,10 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::space_box::SpaceBox,
     graphics::{
+        context::Context,
         instanced_mesh::InstancedMesh,
         material::{skybox_material::SkyboxMaterial, Material},
-        shaders::{skybox_shader::SkyboxShader, ShaderProgram},
+        shaders::skybox_shader::{SkyboxShader, SkyboxShaderDefinition},
         vertices::{
             indices::TriangleGeometry,
             layouts::PTVertex,
@@ -21,7 +22,7 @@ pub struct SkyboxRenderer {
 }
 
 pub struct SkyboxRendererSystem {
-    shader: SkyboxShader,
+    shader: SkyboxShaderDefinition,
 }
 
 impl SkyboxRenderer {
@@ -48,24 +49,27 @@ impl<'a> ComponentIteratorGenerator<'a, &'a SkyboxRenderer> for EntityManager {
 impl SkyboxRendererSystem {
     pub fn render<'a>(
         &self,
+        context: &mut Context,
         entity_manager: &EntityManager,
         camera: &Camera,
         camera_transform: &Transform,
     ) {
-        self.shader.bind();
-        entity_manager
-            .get_view()
-            .for_each(|skybox: &SkyboxRenderer| {
-                skybox.material.bind();
+        let skyboxes = entity_manager.get_view();
 
-                let (projection, view) = camera.projection_view(camera_transform);
+        context.use_shader(&self.shader, |context| {
+            skyboxes.for_each(|skybox: &SkyboxRenderer| {
+                context.use_material(&skybox.material, |context| {
+                    let (projection, view) = camera.projection_view(camera_transform);
 
-                let pass = self.shader.new_pass(&projection, &view);
-                pass.render(&skybox.mesh);
+                    context.shader.projection(&projection);
+                    context.shader.view(&view);
+                    skybox.mesh.render();
+                });
             });
+        });
     }
 
-    pub fn new(shader: SkyboxShader) -> Self {
+    pub fn new(shader: SkyboxShaderDefinition) -> Self {
         SkyboxRendererSystem { shader }
     }
 }

@@ -1,17 +1,30 @@
 use std::{
     any::{self, Any},
     collections::HashMap,
-    env,
+    env, fs,
     path::PathBuf,
 };
 
-use freetype::Library;
-
-use crate::game_root::GameError;
+use crate::{
+    game_root::GameError,
+    graphics::{
+        material::{
+            bullet_material::BulletMaterial, particle_material::ParticleMaterial,
+            phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
+            sprite_material::SpriteMaterial,
+        },
+        model::Model,
+        shaders::{
+            bullet_shader::BulletShaderDefinition, flat_shader::FlatShaderDefinition,
+            mesh_shader::MeshShaderDefinition, particle_shader::ParticleShaderDefinition,
+            skybox_shader::SkyboxShaderDefinition, sprite_shader::SpriteShaderDefinition,
+            text_shader::TextShaderDefinition,
+        },
+    },
+};
 
 use super::{
-    font::load_font, indexer::index_resources, material::load_mat, mesh::load_mesh,
-    resource::Resource, ResourceManager,
+    font::Font, indexer::index_resources, resource::Resource, ResourceLoader, ResourceManager,
 };
 
 pub enum LazyResource<T> {
@@ -55,30 +68,58 @@ pub struct SceneResourceManager {
 
 impl SceneResourceManager {
     pub fn build(root: &str) -> Result<Self, GameError> {
+        println!("Indexing resources in '{}'", root);
         let resource_index = index_resources(&Self::root_path(root)?);
 
-        let resources = Vec::new();
-        let mut freetype_lib = Library::init().unwrap();
-        let mut res_man = SceneResourceManager { resources };
+        let mut res_man = SceneResourceManager {
+            resources: Vec::new(),
+        };
 
-        resource_index.iter().for_each(|(res_id, ext, dir)| {
-            load_font(res_id, ext, dir, &mut freetype_lib, &mut res_man)
-        });
+        res_man.build_resource::<Model>(&resource_index);
+        res_man.build_resource::<Font>(&resource_index);
 
-        /*resource_index
-            .iter()
-            .for_each(|(res_id, ext, dir)| load_shader(res_id, ext, dir, &mut res_man));*/
+        //Shaders
+        res_man.build_resource::<SpriteShaderDefinition>(&resource_index);
+        res_man.build_resource::<SkyboxShaderDefinition>(&resource_index);
+        res_man.build_resource::<MeshShaderDefinition>(&resource_index);
+        res_man.build_resource::<FlatShaderDefinition>(&resource_index);
+        res_man.build_resource::<TextShaderDefinition>(&resource_index);
+        res_man.build_resource::<BulletShaderDefinition>(&resource_index);
+        res_man.build_resource::<ParticleShaderDefinition>(&resource_index);
 
-        resource_index
-            .iter()
-            .for_each(|(res_id, ext, dir)| load_mat(res_id, ext, dir, &mut res_man));
-
-        resource_index
-            .iter()
-            .filter(|(_, ext, _)| ext == "mesh")
-            .for_each(|(res_id, _, dir)| load_mesh(res_id, dir, &mut res_man));
+        //Materials
+        res_man.build_resource::<SpriteMaterial>(&resource_index);
+        res_man.build_resource::<PhongMaterial>(&resource_index);
+        res_man.build_resource::<SkyboxMaterial>(&resource_index);
+        res_man.build_resource::<ParticleMaterial>(&resource_index);
+        res_man.build_resource::<BulletMaterial>(&resource_index);
 
         Ok(res_man)
+    }
+
+    pub fn build_resource<T: ResourceLoader + 'static>(
+        &mut self,
+        index: &[(String, String, PathBuf)],
+    ) {
+        index
+            .iter()
+            .filter(|(_, _, dir)| T::is_resource(dir))
+            .for_each(|(res_id, _, dir)| {
+                let dir_content = fs::read_dir(dir).map(|dir| -> Vec<_> {
+                    dir.filter_map(|entry| entry.map(|entry| entry.path()).ok())
+                        .collect()
+                });
+
+                if let Ok(dir_content) = dir_content {
+                    if let Ok(resource) = T::load_resource(&dir_content) {
+                        self.register(res_id, resource);
+                    }
+                    match T::load_resource(&dir_content) {
+                        Ok(resource) => self.register(res_id, resource),
+                        Err(e) => println!("Failed to load resource '{}':\n{}", res_id, e),
+                    }
+                }
+            })
     }
 
     fn root_path(root: &str) -> Result<PathBuf, GameError> {

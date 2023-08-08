@@ -1,11 +1,10 @@
-use crate::{
-    components::{collider::Collider, physical_body::PhysicalBody},
-    graphics::{model::Model, mesh::Mesh, vertices::sphere::sphere},
-    resource_manager::{self, scene_resource_manager::SceneResourceManager, ResourceManager},
+use crate::components::{
+    collider::Collider, particle_emitter::ParticleEmitter, physical_body::PhysicalBody,
 };
 
 pub struct BulletEntity {
     pub collider: Collider,
     pub body: PhysicalBody,
+    pub explosion_effect: Option<ParticleEmitter>,
     pub lifetime: f32,
 }

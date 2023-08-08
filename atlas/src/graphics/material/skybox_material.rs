@@ -4,11 +4,8 @@ use glad_gl::gl;
 
 use crate::{
     game_root::GameError,
-    graphics::{
-        material::load_named_texture,
-        shaders::{skybox_shader::SkyboxShader, ShaderProgram},
-        texture::Texture,
-    },
+    graphics::{material::load_named_texture, texture::Texture},
+    resource_manager::ResourceLoader,
 };
 
 use super::Material;
@@ -36,12 +33,24 @@ impl Material for SkyboxMaterial {
 }
 
 impl SkyboxMaterial {
-    pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
+    pub fn get_side_sampler(&self, i: usize) -> i32 {
+        (gl::TEXTURE0 + i as u32) as i32
+    }
+}
+
+impl ResourceLoader for SkyboxMaterial {
+    type Resource = SkyboxMaterial;
+
+    fn is_resource(path: &PathBuf) -> bool {
+        path.extension().map_or(false, |e| e == "skybox")
+    }
+
+    fn load_resource(contents: &[PathBuf]) -> Result<Self::Resource, GameError> {
         let sides = ["front", "back", "bot", "top", "left", "right"];
 
         let sides: Vec<_> = sides
             .iter()
-            .filter_map(|side| load_named_texture(side, textures).ok())
+            .filter_map(|side| load_named_texture(side, contents).ok())
             .collect();
 
         let sides: [_; 6] = sides
@@ -49,9 +58,5 @@ impl SkyboxMaterial {
             .map_err(|_e| GameError::new(&format!("Failed to load textures of skybox",)))?;
 
         Ok(Self { sides })
-    }
-
-    pub fn get_side_sampler(&self, i: usize) -> i32 {
-        (gl::TEXTURE0 + i as u32) as i32
     }
 }

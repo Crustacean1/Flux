@@ -1,16 +1,13 @@
-use glam::Vec3;
-
 use crate::{
     components::{
         camera::Camera, collider::Collider, physical_body::PhysicalBody, transform::Transform,
     },
-    entity_manager::{self, ComponentIteratorGenerator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     graphics::{
-        instanced_mesh::InstancedMesh,
         mesh::Mesh,
-        shaders::{flat_shader::FlatShader, ShaderProgram},
+        shaders::flat_shader::FlatShader,
         vertices::{
-            indices::{LineGeometry, PointGeometry},
+            indices::LineGeometry,
             layouts::{Attribute, BufferElement, PVertex},
         },
     },
@@ -74,11 +71,11 @@ impl TrailRenderer {
             },
         );
 
-        self.shader.bind();
-        let (projection, view) = camera.projection_view(camera_transform);
-        self.shader.bind_projection_view(&(projection * view));
-        self.mesh.load_vertices(&self.vertices);
-        self.mesh.load_indices(&self.indices);
-        self.mesh.render();
+        //self.shader.bind();
+        //let (projection, view) = camera.projection_view(camera_transform);
+        //self.shader.bind_projection_view(&(projection * view));
+        //self.mesh.load_vertices(&self.vertices);
+        //self.mesh.load_indices(&self.indices);
+        //self.mesh.render();
     }
 }

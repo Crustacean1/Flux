@@ -6,13 +6,14 @@ use glad_gl::gl;
 use crate::{
     game_root::GameError,
     graphics::{
+        material::Material,
         mesh::Mesh,
         texture::{ChannelLayout, Texture},
         vertices::{indices::TriangleGeometry, layouts::P2TVertex},
     },
 };
 
-use super::{scene_resource_manager::SceneResourceManager, ResourceManager};
+use super::{scene_resource_manager::SceneResourceManager, ResourceLoader, ResourceManager};
 
 #[derive(Clone, Copy)]
 pub struct Character {
@@ -81,8 +82,10 @@ impl Font {
         target.load_vertices(&char_quads);
         target.load_indices(&char_quads_indices);
     }
+}
 
-    pub fn bind(&self) {
+impl Material for Font {
+    fn bind(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.texture.bind()
@@ -90,32 +93,23 @@ impl Font {
     }
 }
 
-pub fn load_font(
-    res_id: &str,
-    ext: &str,
-    dir: &PathBuf,
-    freetype: &mut Library,
-    res_man: &mut SceneResourceManager,
-) {
-    match ext {
-        "font" => {
-            if let Ok(font_files) = fs::read_dir(dir) {
-                if let Some(font_file) = font_files.filter_map(|font| font.ok()).find(|font| {
-                    font.path().extension().map_or(false, |font| {
-                        font.to_str()
-                            .map_or(false, |font| ["ttf", "otf"].contains(&font))
-                    })
-                }) {
-                    match load_font_file(&font_file.path(), freetype) {
-                        Ok(font) => res_man.register(res_id, font),
-                        Err(e) => {
-                            println!("Failed to load font:\n{}", e);
-                        }
-                    }
-                }
-            }
-        }
-        _ => {}
+impl ResourceLoader for Font {
+    type Resource = Font;
+
+    fn is_resource(path: &PathBuf) -> bool {
+        path.extension().map_or(false, |e| e == "font")
+    }
+
+    fn load_resource(contents: &[PathBuf]) -> Result<Self::Resource, GameError> {
+        let mut freetype_lib =
+            Library::init().map_err(|e| GameError::new(&format!("Failed to load font: {}", e)))?;
+
+        let filename = contents
+            .iter()
+            .find(|f| f.extension().map_or(false, |f| f == "otf" || f == "ttf"))
+            .ok_or(GameError::new("No otf or ttf file found"))?;
+
+        load_font_file(filename, &mut freetype_lib)
     }
 }
 

@@ -3,6 +3,7 @@ use std::sync::mpsc::Receiver;
 use glad_gl::gl;
 use glfw::{Action, Context, Glfw, InitError, WindowEvent};
 
+use crate::graphics::context;
 use crate::{event_bus::EventSender, game_root::GameError, scene::SceneEvent};
 
 pub struct GraphicsContext {
@@ -79,6 +80,10 @@ impl GraphicsContext {
             glfw,
             tracked_mouse_pos: (0.0, 0.0),
         })
+    }
+
+    pub fn new_context(&self) -> context::Context {
+        context::Context {}
     }
 
     pub fn poll_events(&mut self, event_sender: &mut EventSender) {

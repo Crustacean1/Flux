@@ -29,8 +29,8 @@ use atlas::{
             phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
             sprite_material::SpriteMaterial,
         },
-        model::Model,
         mesh::Mesh,
+        model::Model,
         vertices::{crosshair::crosshair, generator, sphere},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
@@ -70,8 +70,8 @@ pub fn asteroids(
     let player_id = entity_manager.add_at(
         PlayerShip {
             camera,
-            physical_body: PhysicalBody::new(10., 10.),
-            collider: Collider { radius: 2.0 },
+            physical_body: PhysicalBody::new(10., 10., 0.995),
+            collider: Collider { radius: 2.0 , callback: None},
             thruster,
             mesh: resource_manager.get("spaceship3").res,
         },
@@ -87,8 +87,8 @@ pub fn asteroids(
 
         entity_manager.add_at(
             EnemyShip {
-                collider: Collider { radius: 2.0 },
-                physical_body: PhysicalBody::new(10., 10.),
+                collider: Collider { radius: 2.0 , callback: None},
+                physical_body: PhysicalBody::new(10., 10., 0.995),
                 thruster,
                 mesh: mesh.clone(),
             },
@@ -117,14 +117,14 @@ fn create_asteroids(
             (0..5).for_each(|z| {
                 let mut rnd = rand::thread_rng();
 
-                /*entity_manager.add_at(
+                entity_manager.add_at(
                     AsteroidEntity::prefab(material.clone(), 10.0),
                     Transform::pos(Vec3::new(
                         rnd.gen_range(-100.0..100.0),
                         rnd.gen_range(-100.0..100.0),
                         rnd.gen_range(-100.0..100.0),
                     )),
-                );*/
+                );
             })
         })
     });
@@ -168,7 +168,7 @@ fn create_thruster(resource_manager: &mut SceneResourceManager) -> ParticleEmitt
         emitter_definition,
         thruster_material,
         instanced_mesh,
-        &thruster_spawner,
+        Box::new(thruster_spawner),
     )
 }
 

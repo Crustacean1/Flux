@@ -2,19 +2,31 @@ use std::path::PathBuf;
 
 use glad_gl::gl;
 
-use crate::{
-    game_root::GameError,
-    graphics::{
-        shaders::{ui_shader::SpriteShader, ShaderProgram},
-        texture::Texture,
-    },
-};
+use crate::{game_root::GameError, graphics::texture::Texture, resource_manager::ResourceLoader};
 
-use super::{load_named_texture, Material};
+use super::Material;
 
 #[derive(Clone)]
 pub struct SpriteMaterial {
     pub tex: Texture,
+}
+
+impl ResourceLoader for SpriteMaterial {
+    type Resource = SpriteMaterial;
+
+    fn is_resource(path: &PathBuf) -> bool {
+        path.extension().map_or(false, |e| e == "sprite")
+    }
+
+    fn load_resource(contents: &[PathBuf]) -> Result<Self::Resource, GameError> {
+        contents
+            .iter()
+            .next()
+            .map(|tex| SpriteMaterial {
+                tex: Texture::from_file(tex).unwrap(),
+            })
+            .ok_or(GameError::new("Failed to load sprite "))
+    }
 }
 
 impl Default for SpriteMaterial {
@@ -31,17 +43,5 @@ impl Material for SpriteMaterial {
             gl::ActiveTexture(gl::TEXTURE0);
             self.tex.bind();
         }
-    }
-}
-
-impl SpriteMaterial {
-    pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
-        textures
-            .iter()
-            .next()
-            .map(|tex| SpriteMaterial {
-                tex: Texture::from_file(tex).unwrap(),
-            })
-            .ok_or(GameError::new("Failed to load sprite "))
     }
 }

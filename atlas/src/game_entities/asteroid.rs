@@ -26,18 +26,19 @@ impl AsteroidEntity {
         let (vertices, indices) = asteroid(radius, 15);
         let primitive = Mesh::new(&vertices, &indices);
         let mut rnd = rand::thread_rng();
-        let mut body = PhysicalBody::new(100.0, 100.0);
+        let mut body = PhysicalBody::new(100.0, 100.0,1.0);
         body.momentum = Vec3::new(
             rnd.gen_range(-150.0..150.0),
             rnd.gen_range(-150.0..150.0),
             rnd.gen_range(-150.0..150.0),
         );
+        body.momentum = Vec3::ZERO;
         Self {
             mesh: Model {
                 meshes: vec![(material, primitive)],
             },
             body,
-            collider: Collider { radius: radius *1.1},
+            collider: Collider { radius: radius *1.1, callback: None},
         }
     }
 }

@@ -2,13 +2,7 @@ use std::path::PathBuf;
 
 use glad_gl::gl;
 
-use crate::{
-    game_root::GameError,
-    graphics::{
-        shaders::{mesh_shader::MeshShader, ShaderProgram},
-        texture::Texture,
-    },
-};
+use crate::{game_root::GameError, graphics::texture::Texture, resource_manager::ResourceLoader};
 
 use super::{load_named_texture, Material};
 
@@ -35,9 +29,23 @@ impl Material for PhongMaterial {
 }
 
 impl PhongMaterial {
-    pub fn load(textures: &Vec<PathBuf>) -> Result<Self, GameError> {
+    pub fn load(textures: &[PathBuf]) -> Result<Self, GameError> {
         Ok(PhongMaterial {
             diffuse: load_named_texture("diffuse", textures)?,
+        })
+    }
+}
+
+impl ResourceLoader for PhongMaterial {
+    type Resource = PhongMaterial;
+
+    fn is_resource(path: &PathBuf) -> bool {
+        path.extension().map_or(false, |e| e == "mat")
+    }
+
+    fn load_resource(contents: &[PathBuf]) -> Result<Self::Resource, GameError> {
+        Ok(PhongMaterial {
+            diffuse: load_named_texture("diffuse", contents)?,
         })
     }
 }

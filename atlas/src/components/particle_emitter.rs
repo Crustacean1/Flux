@@ -1,20 +1,12 @@
-use glam::{Vec3, Vec4};
-
-use crate::{
-    entity_manager::{ComponentIteratorGenerator, EntityManager},
-    graphics::{
-        instanced_mesh::InstancedMesh,
-        material::particle_material::ParticleMaterial,
-        shaders::particle_shader::ParticleInstance,
-        vertices::{
-            generator,
-            indices::TriangleGeometry,
-            layouts::{Attribute, BufferElement, P2TVertex},
-        },
+use crate::graphics::{
+    instanced_mesh::InstancedMesh,
+    material::particle_material::ParticleMaterial,
+    shaders::particle_shader::ParticleInstance,
+    vertices::{
+        indices::TriangleGeometry,
+        layouts::{Attribute, BufferElement, P2TVertex},
     },
 };
-
-use super::transform::Transform;
 
 impl BufferElement for ParticleInstance {
     fn layout() -> Vec<Attribute> {
@@ -46,7 +38,7 @@ pub struct ParticleEmitter {
     pub definition: ParticleEmitterDefinition,
     pub mesh: InstancedMesh<ParticleInstance, P2TVertex, TriangleGeometry>,
     pub material: ParticleMaterial,
-    pub spawner: &'static dyn Fn(&mut Particle),
+    pub spawner: Box<dyn Fn(&mut Particle)>,
     pub particles: Vec<Particle>,
     pub particle_instances: Vec<ParticleInstance>,
     pub since_last_spawn: f32,
@@ -57,7 +49,7 @@ impl ParticleEmitter {
         definition: ParticleEmitterDefinition,
         material: ParticleMaterial,
         mesh: InstancedMesh<ParticleInstance, P2TVertex, TriangleGeometry>,
-        spawner: &'static dyn Fn(&mut Particle),
+        spawner: Box<dyn Fn(&mut Particle)>,
     ) -> Self {
         Self {
             particles: Vec::with_capacity(definition.count),

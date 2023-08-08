@@ -1,73 +1,70 @@
-use glad_gl::gl;
 use glam::Mat4;
 
-use crate::{
-    game_root::GameError,
-    graphics::{
-        instanced_mesh::InstancedMesh,
-        mesh::Mesh,
-        vertices::{
-            indices::PointGeometry,
-            layouts::{P2TVertex, PVertex},
-        },
-    },
-    systems::bullet_renderer::BulletInstance,
-};
+use crate::game_root::GameError;
 
-use super::{
-    build_shader, locate_uniform, try_locate_uniform, Shader, ShaderProgram, UniformLoader,
-};
+use super::{try_locate_uniform, Shader, ShaderDefinition, UniformLoader};
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Default)]
+struct Uniform {
+    projection: i32,
+    view: i32,
+    texture: i32,
+}
+
 pub struct BulletShader {
     shader_id: u32,
-
-    projection_uniform: i32,
-    view_uniform: i32,
-    texture_uniform: i32,
+    uniform: Uniform,
 }
 
-pub struct BulletShaderPass<'a> {
-    shader: &'a mut BulletShader,
+impl BulletShader {
+    pub fn projection(&self, mat: &Mat4) {
+        self.load(self.uniform.projection, mat);
+    }
+
+    pub fn view(&self, mat: &Mat4) {
+        self.load(self.uniform.view, mat);
+    }
+
+    pub fn texture(&self, tex: i32) {
+        self.load(self.uniform.texture, tex);
+    }
 }
 
-impl<'a> BulletShaderPass<'a> {
-    pub fn render(&self, mesh: &InstancedMesh<BulletInstance, PVertex, PointGeometry>) {
-        mesh.render();
+#[derive(Clone, Default)]
+pub struct BulletShaderDefinition {
+    shader_id: u32,
+    uniform: Uniform,
+}
+
+impl ShaderDefinition for BulletShaderDefinition {
+    fn create_shader(&self) -> BulletShader {
+        BulletShader {
+            shader_id: self.shader_id,
+            uniform: self.uniform,
+        }
+    }
+
+    type Shader = BulletShader;
+
+    const EXTENSION: &'static str = "bullet_shader";
+
+    fn build(shader_id: u32) -> Result<Self, GameError> {
+        let projection = try_locate_uniform(shader_id, "projection")?;
+        let view = try_locate_uniform(shader_id, "view")?;
+        let texture = try_locate_uniform(shader_id, "sprite")?;
+
+        let uniform = Uniform {
+            projection,
+            view,
+            texture,
+        };
+
+        Ok(Self { shader_id, uniform })
     }
 }
 
 impl Shader for BulletShader {
     fn shader_id(&self) -> u32 {
         self.shader_id
-    }
-}
-
-impl BulletShader {
-    fn build(
-        vertex: &str,
-        geometry: &str,
-        fragment: &str,
-    ) -> Result<BulletShader, crate::game_root::GameError> {
-        let shader_id = build_shader(Some(vertex), Some(geometry), Some(fragment))?;
-
-        let projection_uniform = try_locate_uniform(shader_id, "projection")?;
-        let view_uniform = try_locate_uniform(shader_id, "view")?;
-        let texture_uniform = try_locate_uniform(shader_id, "sprite")?;
-
-        Ok(Self {
-            shader_id,
-            projection_uniform,
-            texture_uniform,
-            view_uniform,
-        })
-    }
-
-    pub fn new_pass(&mut self, projection: &Mat4, view: &Mat4) -> BulletShaderPass {
-        self.bind();
-        self.load(self.projection_uniform, projection);
-        self.load(self.view_uniform, view);
-
-        BulletShaderPass { shader: self }
     }
 }

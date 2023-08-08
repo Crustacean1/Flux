@@ -1,31 +1,48 @@
 use glam::Mat4;
 
-use crate::{
-    game_root::GameError,
-    graphics::{
-        mesh::Mesh,
-        vertices::{indices::LineGeometry, layouts::PVertex},
-    },
-};
+use crate::game_root::GameError;
 
-use super::{build_shader, locate_uniform, Shader, ShaderProgram, UniformLoader};
+use super::{try_locate_uniform, Shader, ShaderDefinition, UniformLoader};
 
-pub struct FlatShaderPass<'a> {
-    shader: &'a mut FlatShader,
+#[derive(Clone, Copy, Default)]
+struct Uniform {
+    projection_view: i32,
 }
 
-impl<'a> FlatShaderPass<'a> {
-    pub fn render(mesh: Mesh<PVertex, LineGeometry>) {
-        mesh.bind();
-        mesh.render();
+#[derive(Clone, Default)]
+pub struct FlatShaderDefinition {
+    shader_id: u32,
+    uniform: Uniform,
+}
+
+impl ShaderDefinition for FlatShaderDefinition {
+    fn create_shader(&self) -> FlatShader {
+        FlatShader {
+            shader_id: self.shader_id,
+            uniform: self.uniform,
+        }
+    }
+
+    type Shader = FlatShader;
+
+    const EXTENSION: &'static str = "flat_shader";
+
+    fn build(shader_id: u32) -> Result<Self, GameError> {
+        let projection_view = try_locate_uniform(shader_id, "projection_view")?;
+
+        let uniform = Uniform { projection_view };
+
+        Ok(Self { shader_id, uniform })
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct FlatShader {
     shader_id: u32,
-    projection_view_uniform: i32,
+    uniform: Uniform,
 }
+
+impl FlatShader {}
 
 impl Shader for FlatShader {
     fn shader_id(&self) -> u32 {
@@ -34,19 +51,7 @@ impl Shader for FlatShader {
 }
 
 impl FlatShader {
-    fn build(vertex: &str, fragment: &str) -> Result<FlatShader, crate::game_root::GameError> {
-        let shader_id = build_shader(Some(vertex), None, Some(fragment))?;
-        let projection_view_model_uniform = locate_uniform(shader_id, "projection_view")
-            .ok_or(GameError::uniform("projection_view"))?;
-        Ok(Self {
-            shader_id,
-            projection_view_uniform: projection_view_model_uniform,
-        })
-    }
-
-    fn new_pass(&mut self, projection_view: &Mat4) -> FlatShaderPass {
-        self.bind();
-        self.load(self.projection_view_uniform, projection_view);
-        FlatShaderPass { shader: self }
+    pub fn projection_view(&self, mat: &Mat4) {
+        self.load(self.uniform.projection_view, mat)
     }
 }
