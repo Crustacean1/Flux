@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::bullet_detonator::BulletEvent;
+
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Collider, &'a PhysicalBody)>
     for EntityManager
@@ -44,7 +44,7 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Collider, &'a Physic
 pub struct CollisionSystem {}
 
 impl CollisionSystem {
-    pub fn resolve_collisions(event_sender: &mut EventSender, entity_manager: &EntityManager) {
+    pub fn resolve_collisions(_event_sender: &mut EventSender, entity_manager: &EntityManager) {
         entity_manager.get_view().enumerate().for_each(
             |(i, (transform_a, collider_a, physic_a)): (
                 _,

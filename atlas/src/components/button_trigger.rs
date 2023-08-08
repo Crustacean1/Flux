@@ -70,9 +70,9 @@ impl ButtonTriggerSystem {
     }
 
     pub fn check_buttons_for_event<'a>(
-        entity_manager: &EntityManager,
-        (x, y): (f32, f32),
-        event_sender: &mut EventSender,
+        _entity_manager: &EntityManager,
+        (_x, _y): (f32, f32),
+        _event_sender: &mut EventSender,
     ) {
     }
 }

@@ -1,7 +1,7 @@
 use glam::Vec3;
 
 use crate::{
-    entity_manager::{self, EntityManager},
+    entity_manager::{EntityManager},
     game_entities::{hud::HudEntity, player_ship::PlayerShip},
 };
 

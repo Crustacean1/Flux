@@ -1,5 +1,5 @@
 use crate::{
-    entity_manager::{ComponentIteratorGenerator, EntityManager},
+    entity_manager::{EntityManager},
     event_bus::EventSender,
     game_entities::bullet::BulletEntity,
 };

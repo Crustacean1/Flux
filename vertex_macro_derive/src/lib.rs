@@ -1,13 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro::{self};
 use quote::quote;
-use syn::{self, Data, DeriveInput, Generics};
+use syn::{self, Data, DeriveInput};
 
 #[proc_macro_derive(BufferLayout)]
 pub fn layout_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).expect("Couldn't parse input to layout_derive");
     let struct_name = ast.ident;
-    let struct_generic = ast
+    let _struct_generic = ast
         .generics
         .params
         .first()

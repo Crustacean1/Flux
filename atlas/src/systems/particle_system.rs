@@ -48,7 +48,7 @@ pub fn thruster_spawner(particle: &mut Particle) {
     particle.size = 0.6 - radius * 3.;
 }
 
-fn spawn_particles(emitter: &mut ParticleEmitter, transform: &Transform) {
+fn spawn_particles(emitter: &mut ParticleEmitter, _transform: &Transform) {
     let mut particle = Particle {
         position: [0.0, 0.0, 0.0],
         velocity: [0.0, 0.0, 0.0],

@@ -43,8 +43,8 @@ impl TrailRenderer {
         &mut self,
         reference: &PhysicalBody,
         entity_manager: &EntityManager,
-        camera: &Camera,
-        camera_transform: &Transform,
+        _camera: &Camera,
+        _camera_transform: &Transform,
     ) {
         self.vertices.clear();
         self.indices.clear();

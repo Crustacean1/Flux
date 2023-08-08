@@ -1,4 +1,4 @@
-use core::slice;
+
 use std::{mem, path::PathBuf};
 
 use glad_gl::gl;

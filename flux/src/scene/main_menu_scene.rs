@@ -11,7 +11,7 @@ use atlas::{
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::sprite_shader::{SpriteShader, SpriteShaderDefinition},
+        shaders::sprite_shader::{SpriteShaderDefinition},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
@@ -82,7 +82,7 @@ impl MainMenuScene {
     fn get_scene_action(&mut self) -> Option<SceneEvent> {
         self.event_reader
             .read()?
-            .fold(None, |action, event| match event {
+            .fold(None, |_action, event| match event {
                 SceneEvent::NewScene(new_scene) => Some(SceneEvent::NewScene(new_scene)),
                 SceneEvent::Exit => Some(SceneEvent::Exit),
                 _ => None,

@@ -26,7 +26,7 @@ fn pos_asteroid(radius: f32, details: usize) -> Vec<[f32; 3]> {
     let radius = radius;
 
     let deformations: Vec<_> = (0..(rng.gen_range(10..20)))
-        .map(|i| {
+        .map(|_i| {
             let x_angle = rng.gen_range(0.0..2.0 * PI);
             let y_angle = rng.gen_range(0.0..2.0 * PI);
             Vec3::new(
@@ -54,7 +54,7 @@ fn pos_asteroid(radius: f32, details: usize) -> Vec<[f32; 3]> {
                     let vec = mat * vec;
                     let vec = vec.normalize().xyz();
 
-                    let min_dist = def_ref
+                    let _min_dist = def_ref
                         .iter()
                         .fold(0.0, |max, &def| (vec.dot(def)).max(max))
                         .powi(16);
@@ -116,7 +116,7 @@ fn norm_asteroid(details: usize) -> Vec<[f32; 3]> {
 fn tex_asteroid(details: usize) -> Vec<[f32; 2]> {
     get_transform_matrices()
         .iter()
-        .map(|mat| {
+        .map(|_mat| {
             (0..details).map(move |x| {
                 (0..details).map(move |y| [x as f32 / details as f32, y as f32 / details as f32])
             })

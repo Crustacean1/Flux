@@ -1,15 +1,15 @@
-use std::{fs::File, io::BufReader, mem, ptr};
+use std::{mem, ptr};
 
 use glad_gl::gl;
-use glam::{Mat4, Vec4};
-use gltf::{iter::Buffers, Gltf};
 
-use crate::{game_root::GameError, resource_manager::ResourceLoader};
+
+
+
 
 use super::vertices::{
     buffer::{Buffer, BufferTarget},
-    indices::{IndexGeometry, TriangleGeometry},
-    layouts::{Attribute, BufferElement, PTNVertex},
+    indices::{IndexGeometry},
+    layouts::{Attribute, BufferElement},
 };
 
 #[derive(Clone)]

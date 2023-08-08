@@ -4,7 +4,7 @@ use crate::{
     components::{
         camera::Camera,
         collider::Collider,
-        physical_body::{PhysicalBody, PhysicalInteraction},
+        physical_body::{PhysicalBody},
         transform::Transform,
     },
     entity_manager::{ComponentMutIteratorGenerator, EntityManager},
@@ -129,7 +129,7 @@ impl PlayerController {
                         BulletEntity {
                             collider: Collider {
                                 radius: 0.5,
-                                callback: Some(Box::new(|pos| println!("Bullet on bullet action"))),
+                                callback: Some(Box::new(|_pos| println!("Bullet on bullet action"))),
                             },
                             explosion_effect: None,
                             body: body1,
@@ -141,7 +141,7 @@ impl PlayerController {
                         BulletEntity {
                             collider: Collider {
                                 radius: 0.5,
-                                callback: Some(Box::new(|pos| println!("Bullet on bullet action"))),
+                                callback: Some(Box::new(|_pos| println!("Bullet on bullet action"))),
                             },
                             explosion_effect: None,
                             body: body2,

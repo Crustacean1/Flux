@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use super::{LogMsg, Logger};
+use super::{Logger};
 
 pub struct ConsoleLogger {
     start_time: Instant,

@@ -5,7 +5,7 @@ use crate::{
         physical_body::{PhysicalBody, PhysicalInteraction},
         transform::Transform,
     },
-    entity_manager::{ComponentIteratorGenerator, ComponentMutIteratorGenerator, EntityManager},
+    entity_manager::{ComponentIteratorGenerator, EntityManager},
     game_entities::{
         asteroid::AsteroidEntity, bullet::BulletEntity, enemy_ship::EnemyShip,
         player_ship::PlayerShip,

@@ -52,8 +52,8 @@ impl CollisionRenderer {
     pub fn render(
         &mut self,
         entity_manager: &EntityManager,
-        camera: &Camera,
-        camera_transform: &Transform,
+        _camera: &Camera,
+        _camera_transform: &Transform,
     ) {
         self.instances.clear();
 

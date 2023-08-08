@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec3};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -88,7 +88,7 @@ impl MeshRendererSystem {
         })
     }
 
-    fn get_lights(entity_manager: &EntityManager, view: Mat4) -> Vec<(Vec3, LightColor)> {
+    fn get_lights(entity_manager: &EntityManager, _view: Mat4) -> Vec<(Vec3, LightColor)> {
         entity_manager
             .get_view()
             .map(|(_transform, &light): (&Transform, &Light)| match light {

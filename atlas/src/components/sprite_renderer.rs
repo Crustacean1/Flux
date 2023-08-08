@@ -3,9 +3,9 @@ use crate::{
     game_entities::{hud::HudEntity, sprite::Sprite},
     graphics::{
         context::Context,
-        material::{sprite_material::SpriteMaterial, Material},
+        material::{sprite_material::SpriteMaterial},
         mesh::Mesh,
-        shaders::sprite_shader::{SpriteShader, SpriteShaderDefinition},
+        shaders::sprite_shader::{SpriteShaderDefinition},
         vertices::{crosshair, generator, indices::TriangleGeometry, layouts::P2TVertex},
     },
 };

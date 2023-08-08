@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{path::PathBuf};
 
 use freetype::{face::LoadFlag, Library};
 use glad_gl::gl;
@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::{scene_resource_manager::SceneResourceManager, ResourceLoader, ResourceManager};
+use super::{ResourceLoader, ResourceManager};
 
 #[derive(Clone, Copy)]
 pub struct Character {
@@ -191,7 +191,7 @@ fn load_font_file(path: &PathBuf, freetype: &mut Library) -> Result<Font, GameEr
     Ok(Font {
         characters: characters
             .try_into()
-            .map_err(|e| GameError::new(&format!("Failed to read characters")))?,
+            .map_err(|_e| GameError::new(&format!("Failed to read characters")))?,
         texture,
         texture_size: (width, height),
     })

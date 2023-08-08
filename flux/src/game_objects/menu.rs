@@ -1,9 +1,8 @@
 use atlas::{
     components::{
-        button_handler::ButtonHandler, button_trigger::ButtonTrigger,
-        sprite_renderer::SpriteRenderer, transform::Transform,
+        button_handler::ButtonHandler,
     },
-    entity_manager::{EntityManager, EntityManagerTrait},
+    entity_manager::{EntityManager},
     game_root::GameError,
     graphics::material::sprite_material::SpriteMaterial,
     resource_manager::{
@@ -76,9 +75,9 @@ impl ButtonHandler for BackgroundHandler {
 }
 
 fn add_menu_entry(
-    pos: Vec3,
-    component_manager: &mut EntityManager,
-    material: &Resource<SpriteMaterial>,
+    _pos: Vec3,
+    _component_manager: &mut EntityManager,
+    _material: &Resource<SpriteMaterial>,
 ) {
     /*component_manager.add_entity((
         Transform::pos(pos),

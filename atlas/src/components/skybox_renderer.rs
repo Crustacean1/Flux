@@ -4,8 +4,8 @@ use crate::{
     graphics::{
         context::Context,
         instanced_mesh::InstancedMesh,
-        material::{skybox_material::SkyboxMaterial, Material},
-        shaders::skybox_shader::{SkyboxShader, SkyboxShaderDefinition},
+        material::{skybox_material::SkyboxMaterial},
+        shaders::skybox_shader::{SkyboxShaderDefinition},
         vertices::{
             indices::TriangleGeometry,
             layouts::PTVertex,

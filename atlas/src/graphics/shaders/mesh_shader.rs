@@ -123,5 +123,5 @@ impl MeshShader {
         self.load(self.uniform.directional_light_count, 1);
     }
 
-    pub fn material(&self, material: &PhongMaterial) {}
+    pub fn material(&self, _material: &PhongMaterial) {}
 }

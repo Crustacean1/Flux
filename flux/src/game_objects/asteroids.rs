@@ -11,27 +11,23 @@ use atlas::{
     },
     entity_manager::EntityManager,
     game_entities::{
-        asteroid::{add_perlin_noise, generate_asteroid, AsteroidEntity},
-        bullet::BulletEntity,
+        asteroid::{generate_asteroid, AsteroidEntity},
         enemy_ship::EnemyShip,
         hud::HudEntity,
         player_ship::PlayerShip,
         space_box::SpaceBox,
         starlight::Starlight,
-        ui_label::UiLabel,
     },
     game_root::GameError,
     graphics::{
-        graphics_context::{self, GraphicsContext},
+        graphics_context::{GraphicsContext},
         instanced_mesh::InstancedMesh,
         lights::{Light, LightColor},
         material::{
             phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
-            sprite_material::SpriteMaterial,
         },
-        mesh::Mesh,
         model::Model,
-        vertices::{crosshair::crosshair, generator, sphere},
+        vertices::{generator},
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     systems::{hud_refresher::HudRefresher, particle_system::thruster_spawner},
@@ -82,7 +78,7 @@ pub fn asteroids(
         },
     );
 
-    meshes.iter().enumerate().for_each(|(i, mesh)| {
+    meshes.iter().enumerate().for_each(|(_i, mesh)| {
         let thruster = create_thruster(resource_manager);
 
         entity_manager.add_at(
@@ -112,9 +108,9 @@ fn create_asteroids(
 
     let material: &PhongMaterial = &resource_manager.get("perlin").res;
 
-    (0..5).for_each(|x| {
-        (0..5).for_each(|y| {
-            (0..5).for_each(|z| {
+    (0..5).for_each(|_x| {
+        (0..5).for_each(|_y| {
+            (0..5).for_each(|_z| {
                 let mut rnd = rand::thread_rng();
 
                 entity_manager.add_at(
@@ -172,7 +168,7 @@ fn create_thruster(resource_manager: &mut SceneResourceManager) -> ParticleEmitt
     )
 }
 
-fn create_lights(entity_manager: &mut EntityManager, resource_manager: &mut SceneResourceManager) {
+fn create_lights(entity_manager: &mut EntityManager, _resource_manager: &mut SceneResourceManager) {
     entity_manager.add(Starlight {
         light: Light::DirectionalLight(
             Vec3::new(0.0, -1.0, 0.0),

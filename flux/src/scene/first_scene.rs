@@ -28,7 +28,7 @@ use atlas::{
         physical_simulation::PhysicalSimulation,
         player_controller::{GameEvent, PlayerController},
         text_update::{update_text, TextChangeEvent},
-        trail_renderer::{self, TrailRenderer},
+        trail_renderer::{TrailRenderer},
     },
 };
 use glam::Vec3;
@@ -280,7 +280,7 @@ impl FirstScene {
             })
             .next();
 
-        if let Some((camera_transform, camera, body)) = camera_kit {
+        if let Some((camera_transform, camera, _body)) = camera_kit {
             graphics_context.depth_write(false);
             self.skybox_renderer.render(
                 &mut context,

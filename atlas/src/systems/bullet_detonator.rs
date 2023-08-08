@@ -5,7 +5,7 @@ use rand::Rng;
 
 use crate::{
     components::particle_emitter::{Particle, ParticleEmitter, ParticleEmitterDefinition},
-    entity_manager::{self, EntityManager},
+    entity_manager::{EntityManager},
     event_bus::EventReader,
     game_entities::bullet::BulletEntity,
     graphics::{instanced_mesh::InstancedMesh, vertices::generator},
