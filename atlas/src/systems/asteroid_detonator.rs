@@ -42,7 +42,7 @@ pub fn detonate_asteroids(
             );
 
             entity_manager.add(Explosion {
-                lifetime: 25.0,
+                lifetime: 5.0,
                 explosion,
             });
         }
@@ -87,7 +87,7 @@ fn fire_ball(pos: Vec3) -> impl Fn(&mut Particle) {
             rng.gen_range(0.0..3.14 * 2.0) as f32,
             rng.gen_range(0.0..3.14 * 2.0) as f32,
         );
-        let velocity = rng.gen_range(40.0..45.0);
+        let velocity = rng.gen_range(70.0..95.0);
         particle.velocity = [
             velocity * ang_x.cos() * ang_y.cos(),
             velocity * ang_y.sin(),
@@ -98,10 +98,10 @@ fn fire_ball(pos: Vec3) -> impl Fn(&mut Particle) {
 
         particle.tex = rng.gen_range(0..4) as f32 / 4.0;
 
-        particle.size = rng.gen_range(0.5..1.75);
-        particle.lifetime = 3.0;
-        particle.dampening = 0.99;
+        particle.size = rng.gen_range(2.0..4.75);
+        particle.lifetime = 5.0;
+        particle.dampening = 0.80;
 
-        particle.opacity_delta = 2.5;
+        particle.opacity_delta = 0.2;
     }
 }

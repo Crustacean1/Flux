@@ -1,4 +1,9 @@
 # Flux
+Uruchomienie programu:
+
+`cargo run`
+
+## Postęp prac
 
 |Termin|Opis|Wykonane|
 |--|--|--|

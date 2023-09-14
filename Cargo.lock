@@ -19,7 +19,6 @@ dependencies = [
  "gltf",
  "image",
  "rand",
- "vertex_macro_derive",
 ]
 
 [[package]]
@@ -773,14 +772,6 @@ name = "urlencoding"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8db7427f936968176eaa7cdf81b7f98b980b18495ec28f1b5791ac3bfe3eea9"
-
-[[package]]
-name = "vertex_macro_derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 2.0.18",
-]
 
 [[package]]
 name = "wasi"

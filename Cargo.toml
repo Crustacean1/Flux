@@ -3,5 +3,4 @@
 members = [
     "atlas",
     "flux",
-    "vertex_macro_derive"
 ]
