@@ -62,8 +62,7 @@ impl PhysicalSimulation {
             |(_, transform, physical_body): (usize, &Transform, &PhysicalBody)| {
                 let transform = Self::to_mut(transform);
                 let physical_body = Self::to_mut(physical_body);
-                transform.position += physical_body.position_delta(self.delta);
-                physical_body.update(self.delta);
+                physical_body.update(self.delta, transform);
             },
         );
         self.physical_interactions.clear();

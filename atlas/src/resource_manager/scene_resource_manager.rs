@@ -16,9 +16,9 @@ use crate::{
         model::Model,
         shaders::{
             bullet_shader::BulletShaderDefinition, flat_shader::FlatShaderDefinition,
-            mesh_shader::MeshShaderDefinition, particle_shader::ParticleShaderDefinition,
-            skybox_shader::SkyboxShaderDefinition, sprite_shader::SpriteShaderDefinition,
-            text_shader::TextShaderDefinition,
+            health_shader::HealthShaderDefinition, mesh_shader::MeshShaderDefinition,
+            particle_shader::ParticleShaderDefinition, skybox_shader::SkyboxShaderDefinition,
+            sprite_shader::SpriteShaderDefinition, text_shader::TextShaderDefinition,
         },
     },
 };
@@ -86,6 +86,7 @@ impl SceneResourceManager {
         res_man.build_resource::<TextShaderDefinition>(&resource_index);
         res_man.build_resource::<BulletShaderDefinition>(&resource_index);
         res_man.build_resource::<ParticleShaderDefinition>(&resource_index);
+        res_man.build_resource::<HealthShaderDefinition>(&resource_index);
 
         //Materials
         res_man.build_resource::<SpriteMaterial>(&resource_index);
@@ -111,9 +112,6 @@ impl SceneResourceManager {
                 });
 
                 if let Ok(dir_content) = dir_content {
-                    if let Ok(resource) = T::load_resource(&dir_content) {
-                        self.register(res_id, resource);
-                    }
                     match T::load_resource(&dir_content) {
                         Ok(resource) => self.register(res_id, resource),
                         Err(e) => println!("Failed to load resource '{}':\n{}", res_id, e),

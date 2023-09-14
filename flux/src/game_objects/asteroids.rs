@@ -2,12 +2,14 @@ use atlas::{
     components::{
         camera::{Camera, Frustrum},
         collider::Collider,
+        health_renderer::HealthRenderer,
         particle_emitter::{ParticleEmitter, ParticleEmitterDefinition},
         physical_body::PhysicalBody,
         skybox_renderer::SkyboxRenderer,
         sprite_renderer::SpriteRenderer,
         text_renderer::TextRenderer,
         transform::Transform,
+        unit::Unit,
     },
     entity_manager::EntityManager,
     game_entities::{
@@ -20,17 +22,18 @@ use atlas::{
     },
     game_root::GameError,
     graphics::{
-        graphics_context::{GraphicsContext},
+        graphics_context::GraphicsContext,
         instanced_mesh::InstancedMesh,
         lights::{Light, LightColor},
         material::{
             phong_material::PhongMaterial, skybox_material::SkyboxMaterial,
+            sprite_material::SpriteMaterial,
         },
         model::Model,
-        vertices::{generator},
+        vertices::generator,
     },
-    resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
-    systems::{hud_refresher::HudRefresher, particle_system::thruster_spawner},
+    resource_manager::{font::Font, scene_resource_manager::SceneResourceManager, ResourceManager},
+    systems::particle_system::thruster_spawner,
 };
 use glam::{Quat, Vec3};
 use rand::Rng;
@@ -39,7 +42,7 @@ pub fn asteroids(
     entity_manager: &mut EntityManager,
     resource_manager: &mut SceneResourceManager,
     graphics_context: &mut GraphicsContext,
-) -> Result<HudRefresher, GameError> {
+) -> Result<(), GameError> {
     create_asteroids(entity_manager, resource_manager);
 
     let skybox_material: SkyboxMaterial = resource_manager.get("space1").res;
@@ -59,6 +62,7 @@ pub fn asteroids(
     let camera = Camera::new(
         Frustrum::perspective(width as f32, height as f32, 0.1, 1000.0),
         Vec3::new(0.0, 1.5, 5.0),
+        Quat::from_axis_angle(Vec3::new(0.0, 0.0, 1.0), 0.0),
     );
 
     let thruster = create_thruster(resource_manager);
@@ -67,7 +71,12 @@ pub fn asteroids(
         PlayerShip {
             camera,
             physical_body: PhysicalBody::new(10., 10., 0.995),
-            collider: Collider { radius: 2.0 , callback: None},
+            collider: Collider {
+                toi: 0.0,
+                last_impact: Vec3::ZERO,
+                radius: 2.0,
+                callback: None,
+            },
             thruster,
             mesh: resource_manager.get("spaceship3").res,
         },
@@ -83,10 +92,16 @@ pub fn asteroids(
 
         entity_manager.add_at(
             EnemyShip {
-                collider: Collider { radius: 2.0 , callback: None},
-                physical_body: PhysicalBody::new(10., 10., 0.995),
+                collider: Collider {
+                    toi: 0.0,
+                    last_impact: Vec3::ZERO,
+                    radius: 2.0,
+                    callback: None,
+                },
+                physical_body: PhysicalBody::new(100., 100., 0.995),
                 thruster,
                 mesh: mesh.clone(),
+                info: Unit::new("Ravager A", "Enemy", 256.0),
             },
             Transform::pos(Vec3::new(0.0, 0.0, -10.0)),
         );
@@ -94,9 +109,14 @@ pub fn asteroids(
 
     entity_manager.add(SpaceBox { renderer: skybox });
     create_lights(entity_manager, resource_manager);
-    let hud_id = create_hud(entity_manager, resource_manager, graphics_context);
+    create_hud(
+        player_id,
+        entity_manager,
+        resource_manager,
+        graphics_context,
+    );
 
-    Ok(HudRefresher { hud_id, player_id })
+    Ok(())
 }
 
 fn create_asteroids(
@@ -108,17 +128,17 @@ fn create_asteroids(
 
     let material: &PhongMaterial = &resource_manager.get("perlin").res;
 
-    (0..5).for_each(|_x| {
-        (0..5).for_each(|_y| {
-            (0..5).for_each(|_z| {
+    (-2..3).for_each(|x| {
+        (-2..3).for_each(|y| {
+            (-2..3).for_each(|z| {
                 let mut rnd = rand::thread_rng();
 
                 entity_manager.add_at(
-                    AsteroidEntity::prefab(material.clone(), 10.0),
+                    AsteroidEntity::prefab(material.clone(), rnd.gen_range(5.0..20.0)),
                     Transform::pos(Vec3::new(
-                        rnd.gen_range(-100.0..100.0),
-                        rnd.gen_range(-100.0..100.0),
-                        rnd.gen_range(-100.0..100.0),
+                        x as f32 * 100.0 + rnd.gen_range(-10.0..10.0),
+                        y as f32 * 100.0 + rnd.gen_range(-10.0..10.0),
+                        z as f32 * 100.0 + rnd.gen_range(-10.0..10.0),
                     )),
                 );
             })
@@ -127,36 +147,43 @@ fn create_asteroids(
 }
 
 fn create_hud(
+    player_id: usize,
     entity_manager: &mut EntityManager,
     resource_manager: &mut SceneResourceManager,
     graphics_context: &mut GraphicsContext,
 ) -> usize {
     let (width, height) = graphics_context.dimensions();
-    let font = resource_manager.get("main").res;
-    let mat = resource_manager.get("white").res;
+    let font: Font = resource_manager.get("main").res;
+    let mat: SpriteMaterial = resource_manager.get("white").res;
 
-    let crosshair = SpriteRenderer::crosshair(mat);
+    let crosshair = SpriteRenderer::crosshair(mat.clone());
+
+    let health = HealthRenderer::health_bar(100.0);
 
     entity_manager.add_at(
         HudEntity {
+            health,
+            player_id,
             crosshair,
-            velocity: TextRenderer::new(
-                Transform::pos(Vec3::new(100., -50.0, 0.)),
-                "Velocity",
-                font,
-            ),
+            velocity: new_text("Velocitty", font.clone(), 100.0, -30.0),
+            mass: new_text("Unit: []", font.clone(), 110.0, 0.0),
+            unit: new_text("Unit allometry", font.clone(), 100.0, 30.0),
         },
         Transform::pos(Vec3::new(width as f32 * 0.5, height as f32 * 0.5, 0.)),
     )
 }
 
+fn new_text(text: &str, font: Font, x: f32, y: f32) -> TextRenderer {
+    TextRenderer::new(Transform::pos(Vec3::new(x, y, 0.)), text, font)
+}
+
 fn create_thruster(resource_manager: &mut SceneResourceManager) -> ParticleEmitter {
-    let thruster_material = resource_manager.get("thruster").res;
+    let thruster_material = resource_manager.get("explosion").res;
     let (vertices, indices) = generator::quad(1.0, 1.0);
     let instanced_mesh = InstancedMesh::new(&vertices, &indices, &vec![]);
 
     let emitter_definition = ParticleEmitterDefinition {
-        count: 1000,
+        count: 50,
         rate: 0.005,
     };
 
@@ -173,7 +200,7 @@ fn create_lights(entity_manager: &mut EntityManager, _resource_manager: &mut Sce
         light: Light::DirectionalLight(
             Vec3::new(0.0, -1.0, 0.0),
             LightColor {
-                ambient: Vec3::new(0.3, 0.3, 0.3),
+                ambient: Vec3::new(0.6, 0.6, 0.6),
                 diffuse: Vec3::new(0.5, 0.5, 0.5),
                 specular: Vec3::new(0.0, 0.0, 0.2),
             },

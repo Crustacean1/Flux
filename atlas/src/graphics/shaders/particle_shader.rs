@@ -8,8 +8,9 @@ use super::{try_locate_uniform, Shader, ShaderDefinition, UniformLoader};
 #[derive(Clone, Default, Debug)]
 pub struct ParticleInstance {
     pub position: [f32; 3],
-    pub color: [f32; 3],
+    pub color: [f32; 4],
     pub transform: [f32; 4],
+    pub texture: f32,
 }
 
 #[derive(Clone, Copy, Default)]

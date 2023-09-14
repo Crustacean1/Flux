@@ -3,10 +3,15 @@ use crate::{
     game_entities::{hud::HudEntity, sprite::Sprite},
     graphics::{
         context::Context,
-        material::{sprite_material::SpriteMaterial},
+        material::sprite_material::SpriteMaterial,
         mesh::Mesh,
-        shaders::sprite_shader::{SpriteShaderDefinition},
-        vertices::{crosshair, generator, indices::TriangleGeometry, layouts::P2TVertex},
+        shaders::sprite_shader::SpriteShaderDefinition,
+        vertices::{
+            crosshair, generator,
+            health_bar::{self, health_bar},
+            indices::TriangleGeometry,
+            layouts::P2TVertex,
+        },
     },
 };
 
@@ -31,6 +36,7 @@ impl SpriteRenderer {
         let quad = Mesh::new(&vertices, &indices);
         Self { quad, material }
     }
+
 }
 
 pub struct SpriteRendererSystem {
@@ -45,14 +51,11 @@ impl SpriteRendererSystem {
 
 impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a SpriteRenderer)> for EntityManager {
     fn get_view(&'a self) -> Box<dyn Iterator<Item = (&'a Transform, &'a SpriteRenderer)> + 'a> {
-        let sprites = self
-            .iter::<Sprite>()
-            .map(|sprite_renderer| (&sprite_renderer.transform, &sprite_renderer.entity.renderer));
         let huds = self
             .iter::<HudEntity>()
             .map(|hud_entity| (&hud_entity.transform, &hud_entity.entity.crosshair));
 
-        Box::new(sprites.chain(huds))
+        Box::new(huds)
     }
 }
 

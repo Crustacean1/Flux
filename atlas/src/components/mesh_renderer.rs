@@ -64,7 +64,7 @@ impl MeshRendererSystem {
         camera: &Camera,
         camera_transform: &Transform,
     ) {
-        let (projection, view) = camera.projection_view(&camera_transform);
+        let (projection, view) = camera.ind_projection_view(&camera_transform);
 
         let lights = Self::get_lights(entity_manager, view);
 

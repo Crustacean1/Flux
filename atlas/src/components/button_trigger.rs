@@ -59,13 +59,11 @@ impl ButtonTriggerSystem {
         event_reader: &mut EventReader,
         event_sender: &mut EventSender,
     ) {
-        event_reader.read().map(|events| {
-            events.for_each(|e| match e {
-                IoEvent::LeftMousePress(click_pos) => {
-                    Self::check_buttons_for_event(entity_manager, click_pos, event_sender);
-                }
-                _ => {}
-            })
+        event_reader.read(|e| match e {
+            IoEvent::LeftMousePress(click_pos) => {
+                Self::check_buttons_for_event(entity_manager, click_pos, event_sender);
+            }
+            _ => {}
         });
     }
 

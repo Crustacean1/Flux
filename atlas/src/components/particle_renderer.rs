@@ -1,6 +1,6 @@
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
-    game_entities::{bullet::BulletEntity, enemy_ship::EnemyShip, player_ship::PlayerShip},
+    game_entities::{enemy_ship::EnemyShip, explosion::Explosion, player_ship::PlayerShip},
     graphics::{context::Context, shaders::particle_shader::ParticleShaderDefinition},
 };
 
@@ -18,11 +18,11 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a ParticleEmitter)> fo
         let enemies = self
             .iter::<EnemyShip>()
             .map(|enemy| (&enemy.transform, &enemy.entity.thruster));
-        let bullets = self.iter::<BulletEntity>().filter_map(|bullet| {
-            Some((&bullet.transform, bullet.entity.explosion_effect.as_ref()?))
-        });
+        let explosions = self
+            .iter::<Explosion>()
+            .map(|explosion| (&explosion.transform, &explosion.entity.explosion));
 
-        Box::new(players.chain(enemies).chain(bullets))
+        Box::new(players.chain(enemies).chain(explosions))
     }
 }
 
@@ -41,7 +41,7 @@ impl ParticleRenderer {
         let particles = entity_manager.get_view();
 
         context.use_shader(&self.shader, |context| {
-            let (projection, view) = camera.projection_view(camera_transform);
+            let (projection, view) = camera.ind_projection_view(camera_transform);
             context.shader.projection(&projection);
             context.shader.view(&view);
 

@@ -1,13 +1,14 @@
 use crate::{
-    entity_manager::{EntityManager},
-    event_bus::EventSender,
-    game_entities::bullet::BulletEntity,
+    entity_manager::EntityManager, event_bus::EventSender, game_entities::bullet::BulletEntity,
 };
 
 use super::player_controller::GameEvent;
 
-pub fn update_bullets(entity_manager: &mut EntityManager, event_sender: &mut EventSender, delta: u128) {
-    let delta = delta as f32 / 1_000_000_000 as f32;
+pub fn update_bullets(
+    entity_manager: &mut EntityManager,
+    event_sender: &mut EventSender,
+    delta: f32,
+) {
     //println!("New day - new frame");
     entity_manager
         .iter_mut::<BulletEntity>()

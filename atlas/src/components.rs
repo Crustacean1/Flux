@@ -10,6 +10,8 @@ pub mod text_renderer;
 pub mod transform;
 pub mod particle_renderer;
 pub mod collider;
+pub mod unit;
+pub mod health_renderer;
 
 pub trait ComponentType {
     fn component_type_id() -> usize;

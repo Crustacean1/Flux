@@ -9,6 +9,7 @@ pub mod sphere;
 pub mod asteroid;
 pub mod bullet;
 pub mod crosshair;
+pub mod health_bar;
 
 pub enum PrimitiveType {
     Points,

@@ -71,6 +71,7 @@ impl GraphicsContext {
             //gl::Enable(gl::CULL_FACE);
             //gl::CullFace(gl::FRONT);
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+            gl::LineWidth(10.0);
         }
 
         Ok(GraphicsContext {

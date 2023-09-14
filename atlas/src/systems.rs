@@ -10,3 +10,6 @@ pub mod renderer;
 pub mod collider_renderer;
 pub mod trail_renderer;
 pub mod bullet_detonator;
+pub mod health_renderer;
+pub mod asteroid_detonator;
+pub mod player_follower;

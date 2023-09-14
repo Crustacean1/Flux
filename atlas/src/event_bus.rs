@@ -1,11 +1,7 @@
-use std::{
-    any::{Any},
-    mem,
-    rc::Rc,
-};
+use std::{any::Any, cell::RefCell, mem, rc::Rc};
 
 pub fn create_event_queue() -> (EventSender, EventReader) {
-    let events = Rc::new(Vec::new());
+    let events = Rc::new(RefCell::new(Vec::new()));
     (
         EventSender {
             events: events.clone(),
@@ -14,28 +10,31 @@ pub fn create_event_queue() -> (EventSender, EventReader) {
     )
 }
 
+#[derive(Clone)]
 pub struct EventSender {
-    events: Rc<Vec<Box<dyn Any>>>,
+    events: Rc<RefCell<Vec<Box<dyn Any>>>>,
 }
 
 pub struct EventReader {
-    events: Rc<Vec<Box<dyn Any>>>,
+    events: Rc<RefCell<Vec<Box<dyn Any>>>>,
 }
 
 impl EventReader {
-    pub fn read<T: 'static>(&mut self) -> Option<impl Iterator<Item = T> + '_> {
-        let events = to_mut(self.events.as_ref());
+    pub fn read<T: 'static>(&self, mut reader: impl FnMut(T) -> ()) {
+        let mut events = self.events.borrow_mut();
         events.iter_mut().find_map(|queue| {
-            queue
-                .downcast_mut::<Vec<T>>()
-                .map(|queue| queue.drain(0..queue.len()))
-        })
+            queue.downcast_mut::<Vec<T>>().map(|queue| {
+                queue.drain(0..queue.len()).for_each(|event| {
+                    reader(event);
+                })
+            })
+        });
     }
 }
 
 impl EventSender {
-    pub fn write<T: 'static>(&mut self, event: T) {
-        let events = to_mut(self.events.as_ref());
+    pub fn write<T: 'static>(&self, event: T) {
+        let mut events = self.events.borrow_mut();
         if let Some(queue) = events
             .iter_mut()
             .find_map(|queue| queue.downcast_mut::<Vec<T>>())

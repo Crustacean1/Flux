@@ -54,12 +54,17 @@ fn pos_asteroid(radius: f32, details: usize) -> Vec<[f32; 3]> {
                     let vec = mat * vec;
                     let vec = vec.normalize().xyz();
 
-                    let _min_dist = def_ref
+                    /*let def = deformations
+                        .iter()
+                        .map(|d| d.dot(vec))
+                        .max_by(f32::total_cmp).unwrap().powi;*/
+
+                    let min_dist = def_ref
                         .iter()
                         .fold(0.0, |max, &def| (vec.dot(def)).max(max))
                         .powi(16);
 
-                    let vec = vec * radius * (1.0 );
+                    let vec = vec * (1.0 + min_dist * 0.2) * radius * (1.0);
 
                     [vec.x, vec.y, vec.z]
                 })

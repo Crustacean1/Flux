@@ -11,8 +11,7 @@ use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
 };
 
-pub fn update_particles(entity_manager: &mut EntityManager, delta: u128) {
-    let delta = delta as f32 / 1000_000_000.0;
+pub fn update_particles(entity_manager: &mut EntityManager, delta: f32) {
     entity_manager
         .get_view()
         .for_each(|(transform, emitter): (&Transform, &ParticleEmitter)| {
@@ -24,6 +23,12 @@ pub fn update_particles(entity_manager: &mut EntityManager, delta: u128) {
                 particle.position[0] += particle.velocity[0] * delta;
                 particle.position[1] += particle.velocity[1] * delta;
                 particle.position[2] += particle.velocity[2] * delta;
+
+                particle.velocity[0] *= particle.dampening.powf(delta * 5.0);
+                particle.velocity[1] *= particle.dampening.powf(delta * 5.0);
+                particle.velocity[2] *= particle.dampening.powf(delta * 5.0);
+
+                particle.color[3] -= particle.opacity_delta * delta
             });
 
             kill_particles(emitter);
@@ -44,16 +49,20 @@ pub fn thruster_spawner(particle: &mut Particle) {
     particle.lifetime = 0.5 * (0.05 / (radius) + 0.01).powi(2);
     particle.position = position;
     particle.velocity = velocity;
-    particle.color = [1.0, 1. - 10.0 * radius, 0.0];
+    particle.color = [1.0, 1. - 10.0 * radius, 0.0, 1.0];
+    particle.opacity_delta = 2.0;
     particle.size = 0.6 - radius * 3.;
 }
 
 fn spawn_particles(emitter: &mut ParticleEmitter, _transform: &Transform) {
     let mut particle = Particle {
+        tex: 0.0,
         position: [0.0, 0.0, 0.0],
         velocity: [0.0, 0.0, 0.0],
+        dampening: 1.0,
         size: 0.0,
-        color: [0.0, 0.0, 0.0],
+        color: [0.0, 0.0, 0.0, 0.0],
+        opacity_delta: 0.0,
         lifetime: 0.0,
     };
 
@@ -86,6 +95,7 @@ fn update_particle_instances(emitter: &mut ParticleEmitter, transform: &Transfor
             instance.position = [position.x, position.y, position.z];
             instance.color = particle.color;
             instance.transform = [particle.size, 0.0, 0.0, particle.size];
+            instance.texture = particle.tex;
         });
 
     let size = emitter

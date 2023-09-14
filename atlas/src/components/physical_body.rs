@@ -1,5 +1,7 @@
 use glam::Vec3;
 
+use super::transform::Transform;
+
 #[derive(Clone, Copy)]
 pub enum PhysicalInteraction {
     ForceApplied(f32, Vec3),
@@ -31,14 +33,13 @@ impl PhysicalBody {
 
     pub fn position_delta<'a>(&self, delta: f32) -> Vec3 {
         (self.momentum / self.mass) * delta
-            + (self.resultant_force / self.mass) * delta.powi(2) * 0.5
     }
 
     pub fn velocity(&self) -> Vec3 {
         self.momentum / self.mass
     }
 
-    pub fn angular_veolcity(&self) -> Vec3 {
+    pub fn angular_velocity(&self) -> Vec3 {
         self.angular_momentum / self.angular_inertia
     }
 
@@ -46,18 +47,18 @@ impl PhysicalBody {
         self.resultant_force
     }
 
-    pub fn update<'a>(&mut self, delta: f32) {
-        self.momentum += self.resultant_force * delta;
-        self.angular_momentum += self.resultant_ang_force * delta;
+    pub fn update<'a>(&mut self, delta: f32, transform: &mut Transform) {
+        transform.position += self.position_delta(delta);
 
-        // Dampening
-        self.momentum *= self.dampening_factor;
+        self.momentum += self.resultant_force ;
+        self.angular_momentum += self.resultant_ang_force * delta;
 
         self.resultant_force = Vec3::ZERO;
         self.resultant_ang_force = Vec3::ZERO;
     }
 
-    pub fn add_force(&mut self, force: Vec3) {
+    pub fn impulse(&mut self, force: Vec3) {
         self.resultant_force += force;
+        //self.momentum += force;
     }
 }

@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Quat, Vec3, Vec4};
 
 use crate::{
     entity_manager::{ComponentIteratorGenerator, EntityManager},
@@ -42,6 +42,7 @@ impl<'a> ComponentIteratorGenerator<'a, (&'a Transform, &'a Camera)> for EntityM
 pub struct Camera {
     projection: Mat4,
     position: Vec3,
+    direction: Quat,
 }
 
 pub struct CameraMatrix {
@@ -50,7 +51,7 @@ pub struct CameraMatrix {
 }
 
 impl Camera {
-    pub fn new(frustrum: Frustrum, position: Vec3) -> Self {
+    pub fn new(frustrum: Frustrum, position: Vec3, direction: Quat) -> Self {
         let projection = match frustrum {
             Frustrum::Perspective(persp) => Self::build_perspective_matrix(persp),
             Frustrum::Orthogonal(orth) => Self::build_orth_matrix(orth),
@@ -58,21 +59,43 @@ impl Camera {
         Self {
             projection,
             position,
+            direction,
         }
     }
 
+    pub fn rotation(&self) -> Quat{
+         self.direction
+    }
+
+    pub fn apply_rotation(&mut self, quat: Quat) {
+        self.direction = quat * self.direction;
+    }
+
     pub fn projection_view(&self, camera: &Transform) -> (Mat4, Mat4) {
-        (self.projection, self.build_view_matrix(camera))
+        (
+            self.projection,
+            self.build_view_matrix_from_transform(camera),
+        )
+    }
+
+    pub fn ind_projection_view(&self, obj: &Transform) -> (Mat4, Mat4) {
+        (self.projection, self.build_view_matrix(obj))
     }
 
     pub fn projection(&self) -> Mat4 {
         self.projection
     }
 
-    fn build_view_matrix(&self, camera: &Transform) -> Mat4 {
+    fn build_view_matrix_from_transform(&self, camera: &Transform) -> Mat4 {
         Mat4::from_translation(-self.position)
             * Mat4::from_quat(camera.rotation.conjugate())
             * Mat4::from_translation(-camera.position)
+    }
+
+    fn build_view_matrix(&self, obj: &Transform) -> Mat4 {
+        Mat4::from_translation(-self.position)
+            * Mat4::from_quat(self.direction)
+            * Mat4::from_translation(-obj.position)
     }
 
     fn build_orth_matrix((width, height): (f32, f32)) -> Mat4 {

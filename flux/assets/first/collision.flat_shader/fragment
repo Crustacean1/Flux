@@ -1,7 +1,19 @@
 #version 460 core
 
+in vec3 vPos;
+in vec4 vDirection;
+
 out vec4 fCol;
 
 void main() {
-    fCol = vec4(0,1,0,0.3);
+    vec3 direction = vDirection.xyz;
+    float time = vDirection.w;
+    /*float ring = acos(dot(normalize(vPos), normalize(direction))) / 3.1415926535;
+    float intensity = (0.8 - pow((ring - time) * 5, 2)) ;
+    intensity = max(intensity, 0);
+    float fade = max(0,1 - pow(time * 4,10));
+    intensity *= fade;*/
+
+    float intensity = pow(dot(normalize(vPos), normalize(direction)), 5) * max(0, 1 - pow(time * 4, 5));
+    fCol = vec4(0,1,0, intensity );
 }

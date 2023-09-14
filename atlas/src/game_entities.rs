@@ -9,6 +9,7 @@ pub mod ui_label;
 pub mod bullet;
 pub mod asteroid;
 pub mod hud;
+pub mod explosion;
 
 pub struct GameEntity<T> {
     pub entity: T,

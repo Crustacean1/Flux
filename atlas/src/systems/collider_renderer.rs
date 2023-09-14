@@ -5,9 +5,12 @@ use crate::{
         camera::Camera, collider::Collider, physical_body::PhysicalBody, transform::Transform,
     },
     entity_manager::{ComponentIteratorGenerator, EntityManager},
+    game_entities::{player_ship::PlayerShip, GameEntity},
     graphics::{
+        context::Context,
         instanced_mesh::InstancedMesh,
-        shaders::flat_shader::FlatShader,
+        material::EmptyMaterial,
+        shaders::flat_shader::{FlatShader, FlatShaderDefinition},
         vertices::{
             indices::TriangleGeometry,
             layouts::{Attribute, BufferElement, PTNVertex},
@@ -18,11 +21,13 @@ use crate::{
 
 struct CollisionInstance {
     transform: [f32; 16],
+    direction: [f32; 4],
 }
 
 impl BufferElement for CollisionInstance {
     fn layout() -> Vec<crate::graphics::vertices::layouts::Attribute> {
         vec![
+            Attribute::Float(4),
             Attribute::Float(4),
             Attribute::Float(4),
             Attribute::Float(4),
@@ -33,12 +38,12 @@ impl BufferElement for CollisionInstance {
 
 pub struct CollisionRenderer {
     sphere: InstancedMesh<CollisionInstance, PTNVertex, TriangleGeometry>,
-    shader: FlatShader,
+    shader: FlatShaderDefinition,
     instances: Vec<CollisionInstance>,
 }
 
 impl CollisionRenderer {
-    pub fn new(shader: FlatShader) -> Self {
+    pub fn new(shader: FlatShaderDefinition) -> Self {
         let (vertices, indices) = sphere(1.0, 50);
         let sphere = InstancedMesh::new(&vertices, &indices, &vec![]);
 
@@ -51,24 +56,41 @@ impl CollisionRenderer {
 
     pub fn render(
         &mut self,
+        context: &mut Context,
+        time: f32,
         entity_manager: &EntityManager,
-        _camera: &Camera,
-        _camera_transform: &Transform,
+        camera: &Camera,
+        camera_transform: &Transform,
     ) {
         self.instances.clear();
 
-        entity_manager.get_view().for_each(
-            |(transform, collider, _): (&Transform, &Collider, &PhysicalBody)| {
-                self.instances.push(CollisionInstance {
-                    transform: (Mat4::from_translation(transform.position)
-                        * Mat4::from_scale(Vec3::new(
-                            collider.radius,
-                            collider.radius,
-                            collider.radius,
-                        )))
-                    .to_cols_array(),
-                })
-            },
-        );
+        entity_manager.iter::<PlayerShip>().for_each(|player| {
+            let (transform, collider) = (&player.transform, &player.entity.collider);
+            self.instances.push(CollisionInstance {
+                direction: [
+                    collider.last_impact.x,
+                    collider.last_impact.y,
+                    collider.last_impact.z,
+                    (time - collider.toi),
+                ],
+                transform: (Mat4::from_translation(transform.position)
+                    * Mat4::from_scale(Vec3::new(
+                        collider.radius,
+                        collider.radius,
+                        collider.radius,
+                    )))
+                .to_cols_array(),
+            })
+        });
+
+        self.sphere.load_instances(&self.instances);
+
+        context.use_shader(&mut self.shader, |context| {
+            let (projection, view) = camera.projection_view(camera_transform);
+            context.shader.projection_view(&(projection * view));
+            context.use_material(&EmptyMaterial {}, |context| {
+                self.sphere.render();
+            })
+        });
     }
 }

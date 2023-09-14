@@ -1,0 +1,11 @@
+#version 460 core
+
+in float vHealth;
+
+out vec4 fCol;
+
+uniform float health;
+
+void main(){
+    fCol = vec4(1 - health,health,0,vHealth < health);
+}

@@ -68,7 +68,7 @@ impl BulletRenderer {
         let material = EmptyMaterial {};
 
         context.use_shader(&self.shader, |context| {
-            let (projection, view) = camera.projection_view(camera_transform);
+            let (projection, view) = camera.ind_projection_view(camera_transform);
             context.shader.view(&view);
             context.shader.projection(&projection);
 

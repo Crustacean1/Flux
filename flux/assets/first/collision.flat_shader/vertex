@@ -4,9 +4,15 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec2 tex;
 layout(location=2) in vec3 norm;
 layout(location=3) in mat4 instanceTransform;
+layout(location=7) in vec4 direction;
 
 uniform mat4 projection_view;
 
+out vec4 vDirection;
+out vec3 vPos;
+
 void main(){
     gl_Position = projection_view * instanceTransform * vec4(pos, 1.0);
+    vPos = pos;
+    vDirection = direction;
 }

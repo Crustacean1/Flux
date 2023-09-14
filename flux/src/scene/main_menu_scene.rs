@@ -11,12 +11,12 @@ use atlas::{
     game_root::GameError,
     graphics::{
         graphics_context::{ContextEvent, GraphicsContext},
-        shaders::sprite_shader::{SpriteShaderDefinition},
+        shaders::sprite_shader::SpriteShaderDefinition,
     },
     resource_manager::{scene_resource_manager::SceneResourceManager, ResourceManager},
     scene::{Scene, SceneEvent},
 };
-use glam::Vec3;
+use glam::{Vec3, Quat};
 
 use crate::game_objects::menu::create_main_menu;
 
@@ -67,26 +67,24 @@ impl MainMenuScene {
     fn poll_events(&mut self, graphics_context: &mut GraphicsContext) {
         graphics_context.poll_events(&mut self.event_sender);
 
-        self.event_reader.read().map(|event| {
-            event.for_each(|event| match event {
-                ContextEvent::Resized(width, height) => {
-                    graphics_context.set_viewport(width, height);
-                    /*self.camera
-                    .new(Frustrum::orthogonal(*width as f32, *height as f32));*/
-                }
-                _ => {}
-            })
+        self.event_reader.read(|event| match event {
+            ContextEvent::Resized(width, height) => {
+                graphics_context.set_viewport(width, height);
+                /*self.camera
+                .new(Frustrum::orthogonal(*width as f32, *height as f32));*/
+            }
+            _ => {}
         });
     }
 
     fn get_scene_action(&mut self) -> Option<SceneEvent> {
-        self.event_reader
-            .read()?
-            .fold(None, |_action, event| match event {
-                SceneEvent::NewScene(new_scene) => Some(SceneEvent::NewScene(new_scene)),
-                SceneEvent::Exit => Some(SceneEvent::Exit),
-                _ => None,
-            })
+        let mut action = None;
+        self.event_reader.read(|event| match event {
+            SceneEvent::NewScene(new_scene) => action = Some(SceneEvent::NewScene(new_scene)),
+            SceneEvent::Exit => action = Some(SceneEvent::Exit),
+            _ => (),
+        });
+        action
     }
 
     pub fn new(graphics_context: &mut GraphicsContext) -> Result<Box<dyn Scene>, GameError> {
@@ -110,6 +108,7 @@ impl MainMenuScene {
             camera: Camera::new(
                 Frustrum::orthogonal(width as f32, height as f32),
                 Vec3::new(0.0, 0.0, 0.0),
+                Quat::from_axis_angle(Vec3::new(0.0, 0.0, 1.0), 0.0),
             ),
             entity_manager,
             resource_manager,

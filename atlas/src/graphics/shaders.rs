@@ -14,11 +14,12 @@ use crate::{
 
 pub mod bullet_shader;
 pub mod flat_shader;
+pub mod health_shader;
 pub mod mesh_shader;
 pub mod particle_shader;
 pub mod skybox_shader;
-pub mod text_shader;
 pub mod sprite_shader;
+pub mod text_shader;
 
 pub trait ShaderDefinition: Sized {
     type Shader: Shader;
@@ -79,6 +80,14 @@ impl<Q: Shader> UniformLoader<&Mat4> for Q {
     fn load(&self, uniform: i32, value: &Mat4) {
         unsafe {
             gl::UniformMatrix4fv(uniform, 1, gl::FALSE, value.to_cols_array().as_ptr());
+        }
+    }
+}
+
+impl<Q: Shader> UniformLoader<f32> for Q {
+    fn load(&self, uniform: i32, value: f32) {
+        unsafe {
+            gl::Uniform1f(uniform, value);
         }
     }
 }

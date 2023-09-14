@@ -65,11 +65,8 @@ impl SkyboxShader {
         self.load(self.uniform.view, mat);
     }
 
-    pub fn billboards(&self, billboards: [i32; 6]) {
-        billboards
-            .iter()
-            .enumerate()
-            .for_each(|(i, &billboard)| self.load(self.uniform.billboards[i], billboard));
+    pub fn billboards(&self) {
+        (0..6).for_each(|i| self.load(self.uniform.billboards[i], i as i32));
     }
 }
 

@@ -25,15 +25,10 @@ fn pos_crosshair(lod: usize) -> Vec<[f32; 2]> {
     (0..lod)
         .map(|i| {
             let point = Vec2::new(
-                radius * (angle_start + i as f32 * angle_step).cos() * 0.5,
+                radius * (angle_start + i as f32 * angle_step).cos(),
                 radius * (angle_start + i as f32 * angle_step).sin(),
             );
-            [
-                point + Vec2::new(50.0, 0.0),
-                -point - Vec2::new(50.0, 0.0),
-                point * 0.9 + Vec2::new(50.0, 0.0),
-                -point * 0.9 - Vec2::new(50.0, 0.0),
-            ]
+            [point, -point, point * 0.9, -point * 0.9]
         })
         .flatten()
         .map(|v| [v.x, v.y])

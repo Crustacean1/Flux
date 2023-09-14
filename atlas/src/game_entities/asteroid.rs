@@ -4,12 +4,12 @@ use glam::{Vec2, Vec3};
 use rand::Rng;
 
 use crate::{
-    components::{collider::Collider, physical_body::PhysicalBody},
+    components::{collider::Collider, physical_body::PhysicalBody, unit::Unit},
     game_root::GameError,
     graphics::{
         material::phong_material::PhongMaterial,
-        model::Model,
         mesh::Mesh,
+        model::Model,
         texture::{ChannelLayout, Texture},
         vertices::asteroid::asteroid,
     },
@@ -19,6 +19,7 @@ pub struct AsteroidEntity {
     pub mesh: Model,
     pub body: PhysicalBody,
     pub collider: Collider,
+    pub info: Unit,
 }
 
 impl AsteroidEntity {
@@ -26,29 +27,34 @@ impl AsteroidEntity {
         let (vertices, indices) = asteroid(radius, 15);
         let primitive = Mesh::new(&vertices, &indices);
         let mut rnd = rand::thread_rng();
-        let mut body = PhysicalBody::new(100.0, 100.0,1.0);
+        let mut body = PhysicalBody::new(1000.0, 100.0, 1.0);
         body.momentum = Vec3::new(
-            rnd.gen_range(-150.0..150.0),
-            rnd.gen_range(-150.0..150.0),
-            rnd.gen_range(-150.0..150.0),
+            rnd.gen_range(-50.0..50.0) * 100.0,
+            rnd.gen_range(-50.0..50.0) * 100.0,
+            rnd.gen_range(-50.0..50.0) * 100.0,
         );
-        body.momentum = Vec3::ZERO;
         Self {
             mesh: Model {
                 meshes: vec![(material, primitive)],
             },
             body,
-            collider: Collider { radius: radius *1.1, callback: None},
+            collider: Collider {
+                radius: radius * 1.2,
+                callback: None,
+                toi: 0.0,
+                last_impact: Vec3::ZERO,
+            },
+            info: Unit::new("Asteroid", "Neutral", 100.0 + rnd.gen_range(-10.0..10.0)),
         }
     }
 }
 
 pub fn generate_asteroid((width, height): (usize, usize)) -> Result<Texture, GameError> {
     let mut buffer = vec![96; width * height * 3];
-    add_perlin_noise(&mut buffer, (width, height), 4, 64.0);
+    add_perlin_noise(&mut buffer, (width, height), 4, 128.0);
+    add_perlin_noise(&mut buffer, (width, height), 8, 32.0);
     add_perlin_noise(&mut buffer, (width, height), 16, 32.0);
     add_perlin_noise(&mut buffer, (width, height), 32, 32.0);
-    add_perlin_noise(&mut buffer, (width, height), 64, 32.0);
     Texture::from_buff(&buffer, ChannelLayout::Rgb8, (width as u32, height as u32))
 }
 

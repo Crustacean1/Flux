@@ -66,13 +66,23 @@ impl<'a> ComponentIteratorGenerator<'a, (Transform, &'a TextRenderer)> for Entit
         });
 
         let huds = self.iter::<HudEntity>().map(|hud| {
-            (
-                hud.transform.compose(&hud.entity.velocity.transform),
-                &hud.entity.velocity,
-            )
+            [
+                (
+                    hud.transform.compose(&hud.entity.velocity.transform),
+                    &hud.entity.velocity,
+                ),
+                (
+                    hud.transform.compose(&hud.entity.unit.transform),
+                    &hud.entity.unit,
+                ),
+                (
+                    hud.transform.compose(&hud.entity.mass.transform),
+                    &hud.entity.mass,
+                ),
+            ]
         });
 
-        Box::new(labels.chain(huds))
+        Box::new(labels.chain(huds.flatten()))
     }
 }
 

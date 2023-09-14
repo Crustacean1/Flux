@@ -4,8 +4,8 @@ use crate::{
     graphics::{
         context::Context,
         instanced_mesh::InstancedMesh,
-        material::{skybox_material::SkyboxMaterial},
-        shaders::skybox_shader::{SkyboxShaderDefinition},
+        material::skybox_material::SkyboxMaterial,
+        shaders::skybox_shader::SkyboxShaderDefinition,
         vertices::{
             indices::TriangleGeometry,
             layouts::PTVertex,
@@ -59,9 +59,10 @@ impl SkyboxRendererSystem {
         context.use_shader(&self.shader, |context| {
             skyboxes.for_each(|skybox: &SkyboxRenderer| {
                 context.use_material(&skybox.material, |context| {
-                    let (projection, view) = camera.projection_view(camera_transform);
+                    let (projection, view) = camera.ind_projection_view(camera_transform);
 
                     context.shader.projection(&projection);
+                    context.shader.billboards();
                     context.shader.view(&view);
                     skybox.mesh.render();
                 });
